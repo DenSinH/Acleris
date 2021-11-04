@@ -7,11 +7,21 @@ using namespace util;
 
 Acleris::Acleris(int width, int height) :
         width(width), height(height), screen{width, height} {
-    std::fill(screen.begin(), screen.end(), 0);
+    Clear();
 }
 
 bool Acleris::InBounds(int x, int y) const {
     return (x >= 0) && (x < width) && (y >= 0) && (y < height);
+}
+
+void Acleris::Clear() {
+    std::fill(screen.begin(), screen.end(), 0);
+}
+
+void Acleris::DrawPointScreen(util::Point2D<int> p0) {
+    if (InBounds(p0)) {
+        screen(p0.x, p0.y) = 0xffff'ffff;
+    }
 }
 
 template<bool xmajor>
@@ -29,41 +39,49 @@ void Acleris::DrawLineScreen(Point2D<int> p0, Point2D<int> p1) {
     }
 
     // initial coordinates
-    double x = p0.x, y = p0.y;
-    double dy = float(p1.y - p0.y) / float(p1.x - p0.x);
+    coord_t x = p0.x, y = p0.y;
+    coord_t dy = float(p1.y - p0.y) / float(p1.x - p0.x);
 
+    const auto xbound = (xmajor ? width : height);
     if (x < 0) {
         // clip to screen boundary
         y += -x * dy;
         x = 0;
         if (p1.x < 0) [[unlikely]] return;  // entire line is off screen
     }
-    else if (x > width) {
+    else if (x > xbound) {
         return;
     }
 
+    const auto ybound = (xmajor ? height : width);
     if (y < 0) {
-        if (dy < 0) [[unlikely]] return;  // entire line is off screen
+        // entire line is off screen
+        if (dy < 0) [[unlikely]] return;
         x += -y / dy;
-        if (x > p1.x) [[unlikely]] return;  // line ended before reaching screen
+
+        // line ended before reaching screen
+        if (x > p1.x) [[unlikely]] return;
         y = 0;
     }
-    else if (y > height) {
-        if (dy > 0) [[unlikely]] return;  // entire line is off screen
-        x += (y - height) / dy;
-        if (x > p1.x) [[unlikely]] return;  // line ended before reaching screen
-        y = height;
+    else if (y > ybound) {
+        // entire line is off screen
+        if (dy > 0) [[unlikely]] return;
+        x += (y - ybound) / dy;
+
+        // line ended before reaching screen
+        if (x > p1.x) [[unlikely]] return;
+        y = ybound;
     }
 
     // need to flip coordinates for x/y major
     if constexpr(xmajor) {
-        for (int x_ = x; x_ < p1.x && InBounds(x_, y); x_++) {
+        for (int x_ = int(x); x_ < p1.x && InBounds(x_, int(y)); x_++) {
             screen(int(x_), int(y)) = 0xffff'ffff;
             y += dy;
         }
     }
     else {
-        for (int x_ = x; x_ < p1.x && InBounds(y, x_); x_++) {
+        for (int x_ = int(x); x_ < p1.x && InBounds(int(y), x_); x_++) {
             screen(int(y), int(x_)) = 0xffff'ffff;
             y += dy;
         }
@@ -79,6 +97,57 @@ void Acleris::DrawLineScreen(Point2D<int> p0, Point2D<int> p1) {
     }
     else {
         DrawLineScreen<false>(p0, p1);
+    }
+}
+
+void Acleris::DrawTriangleScreen(util::Point2D<int> p0, util::Point2D<int> p1, util::Point2D<int> p2) {
+    // sort by y coordinate
+    if (p1.y < p0.y) {
+        std::swap(p0, p1);
+    }
+    if (p2.y < p0.y) {
+        std::swap(p0, p2);
+    }
+    if (p2.y < p1.y) {
+        std::swap(p1, p2);
+    }
+    // first: go from top point to middle point
+    coord_t x1 = p0.x, x2 = p0.x;  // x1 will end up at p1 and x2 at p2
+    coord_t dx2 = coord_t(p2.x - p0.x) / coord_t(p2.y - p0.y);
+    coord_t dx1 = coord_t(p1.x - p0.x) / coord_t(p1.y - p0.y);
+
+    coord_t y = p0.y;
+    if (y < 0) {
+        x1 += -y * dx1;
+        x2 += -y * dx2;
+        y = 0;
+    }
+
+    // draw part from p0 down to p1 (along p0 -- p1 and p0 -- p2)
+    const int ymax = std::min(height, p1.y);
+    while (y < ymax) {
+        const int xmax = std::min<int>(width, std::max(x1, x2) + 1);
+        for (int x = std::max<int>(0, std::min(x1, x2)); x < xmax; x++) {
+            screen(x, y) = 0xffff'ffff;
+        }
+        x1 += dx1;
+        x2 += dx2;
+        y++;
+    }
+
+    // draw part from p1 down to p2 (along p0 -- p2 and p1 -- p2)
+    const int ymax_ = std::min(height, std::max(p1.y, p2.y));
+    x1 = p1.x;  // just to be sure (should already be approx. the right value)
+    dx1 = coord_t(p2.x - p1.x) / coord_t(p2.y - p1.y);
+
+    while (y < ymax_) {
+        const int xmax = std::min<int>(width, std::max(x1, x2) + 1);
+        for (int x = std::max<int>(0, std::min(x1, x2)); x < xmax; x++) {
+            screen(x, y) = 0xffff'ffff;
+        }
+        x1 += dx1;
+        x2 += dx2;
+        y++;
     }
 }
 
@@ -105,7 +174,7 @@ void* Acleris::SDLMakeTexture(void* renderer) const {
     );
 }
 
-void Acleris::SDLRun() {
+void Acleris::SDLRun(std::function<void(int, int)> update) {
     auto window = (SDL_Window*)SDLMakeWindow();
     auto renderer = (SDL_Renderer*)SDLMakeRenderer(window);
     auto texture = (SDL_Texture*)SDLMakeTexture(renderer);
@@ -121,6 +190,11 @@ void Acleris::SDLRun() {
                     return;
                 }
             }
+
+            int x, y;
+            SDL_GetMouseState(&x, &y);
+
+            update(x, y);
 
             SDL_RenderClear(renderer);
             SDL_UpdateTexture(texture, nullptr, (const void *)screen.data(), 4 * width);
