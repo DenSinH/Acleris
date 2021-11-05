@@ -2,7 +2,12 @@ find_package(SDL2 REQUIRED)
 
 add_library(Acleris STATIC
         Acleris.cpp
-        Acleris.h common/Point.h)
+        Acleris.h
+        common/Format.h
+        common/StaticFor.h
+        common/Point.h
+        common/NArray.h
+        common/Vertex.h)
 
 if (!${SDL2_FOUND})
     message(FATAL "Could not find SDL2")

@@ -22,16 +22,16 @@ public:
 
     void SDLRun(std::function<void(int, int)> update);
 
-    void DrawPointScreen(util::Point2D<int> p0);
-    void DrawLineScreen(util::Point2D<int> p0, util::Point2D<int> p1);
-    void DrawTriangleScreen(util::Point2D<int> p0, util::Point2D<int> p1, util::Point2D<int> p2);
+    void DrawPointScreen(util::Point<int, 2> p0);
+    void DrawLineScreen(util::Point<int, 2> p0, util::Point<int, 2> p1);
+    void DrawTriangleScreen(util::Point<int, 2> p0, util::Point<int, 2> p1, util::Point<int, 2> p2);
 
 private:
     template<bool xmajor>
-    void DrawLineScreen(util::Point2D<int> p0, util::Point2D<int> p1);
+    void DrawLineScreen(util::Point<int, 2> p0, util::Point<int, 2> p1);
 
     bool InBounds(int x, int y) const;
-    bool InBounds(util::Point2D<int> p) const { return InBounds(p.x, p.y); };
+    bool InBounds(util::Point<int, 2> p) const { return InBounds(p.x[0], p.x[1]); };
 
     void* SDLMakeWindow();
     static void* SDLMakeRenderer(void* window);
