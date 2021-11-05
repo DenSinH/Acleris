@@ -1,13 +1,13 @@
 find_package(SDL2 REQUIRED)
 
 add_library(Acleris STATIC
-        Acleris.cpp
         Acleris.h
-        common/Format.h
-        common/StaticFor.h
-        common/Point.h
-        common/NArray.h
-        common/Vertex.h)
+        Acleris.cpp
+        util/Format.h
+        util/StaticFor.h
+        util/Point.h
+        util/NArray.h
+        )
 
 if (!${SDL2_FOUND})
     message(FATAL "Could not find SDL2")
@@ -17,7 +17,7 @@ set(${CMAKE_CXX_FLAGS} "${CMAKE_CXX_FLAGS} -O2")
 
 message(STATUS "Found SDL at ${SDL2_INCLUDE_DIR}")
 
-target_include_directories(Acleris PUBLIC ${SDL2_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/common)
+target_include_directories(Acleris PUBLIC ${SDL2_INCLUDE_DIR})
 
 target_link_libraries(Acleris PRIVATE ${SDL2_LIBRARY})
 

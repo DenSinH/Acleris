@@ -1,7 +1,10 @@
 #pragma once
 
-#include <NArray.h>
-#include <Point.h>
+#include "util/Format.h"
+#include "util/NArray.h"
+#include "Vertex.h"
+
+#include <SDL.h>
 
 #include <vector>
 #include <memory>
@@ -22,16 +25,9 @@ public:
 
     void SDLRun(std::function<void(int, int)> update);
 
-    void DrawPointScreen(util::Point<int, 2> p0);
-    void DrawLineScreen(util::Point<int, 2> p0, util::Point<int, 2> p1);
-    void DrawTriangleScreen(util::Point<int, 2> p0, util::Point<int, 2> p1, util::Point<int, 2> p2);
-
-private:
-    template<bool xmajor>
-    void DrawLineScreen(util::Point<int, 2> p0, util::Point<int, 2> p1);
-
     bool InBounds(int x, int y) const;
-    bool InBounds(util::Point<int, 2> p) const { return InBounds(p.x[0], p.x[1]); };
+    template<typename V0>
+    bool InBounds(V0 v0) const { return InBounds(v0.x[0], v0.x[1]); };
 
     void* SDLMakeWindow();
     static void* SDLMakeRenderer(void* window);
