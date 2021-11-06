@@ -1,11 +1,12 @@
 #pragma once
 
-#include "util/Point.h"
 #include "util/Algorithm.h"
 #include "util/Func.h"
 #include "util/Tuple.h"
 #include "Acleris.h"
 #include "Vertex.h"
+
+#include <cmath>
 
 
 template<typename V0, typename V1>
@@ -23,13 +24,11 @@ private:
         const V1& v1;
         const F& func;
     private:
-        auto Interp(T x, T y) {
+        auto Interp(T x, T y, const T& l0) {
             static_assert(V0::dim == 2);
             static_assert(V1::dim == 2);
 
             if constexpr(require_interp) {
-                const T len = (v1.x[0] - v0.x[0]) * (v1.x[0] - v0.x[0]) + (v1.x[1] - v0.x[1]) * (v1.x[1] - v0.x[1]);
-                const T l0 = ((x - v0.x[0]) * (x - v0.x[0]) + (y - v0.x[1]) * (y - v0.x[1])) / len;
                 const T l1 = 1 - l0;
 
                 const auto op = [&](const auto& x, const auto& y) {
@@ -57,8 +56,8 @@ private:
         void Draw(Acleris& acleris) {
             // for y-major lines, the algorithm is precisely the same, except x and y are swapped
 
-            util::Point<T, 2> _v0 = {v0.x[0] * acleris.width, v0.x[1] * acleris.height};
-            util::Point<T, 2> _v1 = {v1.x[0] * acleris.width, v1.x[1] * acleris.height};
+            Vector<T, 2> _v0 = {v0.x[0] * acleris.width, v0.x[1] * acleris.height};
+            Vector<T, 2> _v1 = {v1.x[0] * acleris.width, v1.x[1] * acleris.height};
             if constexpr(!xmajor) {
                 std::swap(_v0.x[0], _v0.x[1]);
                 std::swap(_v1.x[0], _v1.x[1]);
@@ -105,16 +104,25 @@ private:
             }
 
             // need to flip coordinates for x/y major
+            const T len = (_v1.x[0] - _v0.x[0]) * (_v1.x[0] - _v0.x[0]) + (_v1.x[1] - _v0.x[1]) * (_v1.x[1] - _v0.x[1]);
+            const T dl = std::sqrt((1 + dy * dy) / len);
+            T l0 = 0;
             if constexpr(xmajor) {
                 for (int x_ = int(x); x_ < _v1.x[0] && acleris.InBounds(x_, int(y)); x_++) {
-                    acleris.screen(int(x_), int(y)) = Interp(x_ / T(acleris.width), y / T(acleris.height));
+                    acleris.screen(int(x_), int(y)) = Interp(x_ / T(acleris.width), y / T(acleris.height), l0);
                     y += dy;
+                    if constexpr(require_interp) {
+                        l0 + dl;
+                    }
                 }
             }
             else {
                 for (int x_ = int(x); x_ < _v1.x[0] && acleris.InBounds(int(y), x_); x_++) {
-                    acleris.screen(int(y), int(x_)) = Interp(y / T(acleris.width), x_ / T(acleris.height));
+                    acleris.screen(int(y), int(x_)) = Interp(y / T(acleris.width), x_ / T(acleris.height), l0);
                     y += dy;
+                    if constexpr(require_interp) {
+                        l0 + dl;
+                    }
                 }
             }
         }

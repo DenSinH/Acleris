@@ -5,7 +5,6 @@ add_library(Acleris STATIC
         Acleris.cpp
         util/Format.h
         util/StaticFor.h
-        util/Point.h
         util/NArray.h
         )
 

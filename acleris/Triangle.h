@@ -1,11 +1,12 @@
 #pragma once
 
-#include "util/Point.h"
 #include "util/Func.h"
 #include "util/Tuple.h"
 #include "util/Algorithm.h"
 #include "Acleris.h"
 #include "Vertex.h"
+
+#include <cmath>
 
 
 template<typename V0, typename V1, typename V2>
@@ -24,7 +25,7 @@ private:
         const V2& v2;
         const F& func;
     private:
-        auto Interp(T x, T y) {
+        auto Interp(T x, T y, const std::pair<T, T>& l) {
             static_assert(V0::dim == 2);
             static_assert(V1::dim == 2);
 
@@ -33,7 +34,6 @@ private:
                 static_assert(V1::dim == 2);
                 static_assert(V2::dim == 2);
 
-                auto l = BarycentricInterp(x, y, v0, v1, v2);
                 const T l0 = l.first;
                 const T l1 = l.second;
                 const T l2 = 1 - l0 - l1;
@@ -68,9 +68,9 @@ private:
             static_assert(V1::dim == 2);
             static_assert(V2::dim == 2);
 
-            util::Point<T, 2> _v0 = {v0.x[0] * acleris.width, v0.x[1] * acleris.height};
-            util::Point<T, 2> _v1 = {v1.x[0] * acleris.width, v1.x[1] * acleris.height};
-            util::Point<T, 2> _v2 = {v2.x[0] * acleris.width, v2.x[1] * acleris.height};
+            Vector<T, 2> _v0 = {v0.x[0] * acleris.width, v0.x[1] * acleris.height};
+            Vector<T, 2> _v1 = {v1.x[0] * acleris.width, v1.x[1] * acleris.height};
+            Vector<T, 2> _v2 = {v2.x[0] * acleris.width, v2.x[1] * acleris.height};
 
             // sort by y coordinate
             if (_v1.x[1] < _v0.x[1]) {
@@ -96,14 +96,77 @@ private:
 
             // draw part from v0 down to v1 (along v0 -- v1 and v0 -- v2)
             const int ymax = std::min<int>(acleris.height, _v1.x[1]);
+
+            /* Faster Barycentric interpolation:
+             * Lerp between the edges, then between the bounds
+             * We fill the triangle in 2 loops:
+             * First we go down from v0 to v1, then down from v1 to v2.
+             * For the first part, l2 (lambda 2, third barycentric coodrinate) is always 0
+             * For the second part, l0 is always 0.
+             *
+             *          /| v0
+             *         / | (100)
+             *        /  |
+             *    v1 /___|
+             * (010) \   |
+             *        \  |
+             *         \ |
+             *          \| v2
+             *             (001)
+             * */
+
+            // difference per line
+            const T dl01 = 1.0 / T(_v1.x[1] - _v0.x[1]);
+            const T dl02 = 1.0 / T(_v2.x[1] - _v0.x[1]);
+
+            // starting line might not be v0.y
+            std::pair<T, T> l01 = std::make_pair(1 - dl01 * (_v0.x[1] - y), 0);
+            std::pair<T, T> l02 = std::make_pair(1 - dl02 * (_v0.x[1] - y), 0);
+
             while (y < ymax) {
+                // x bounds
                 const int xmax = std::min<int>(acleris.width, std::max(x1, x2) + 1);
-                for (int x = std::max<int>(0, std::min(x1, x2)); x < xmax; x++) {
-                    acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height));
+                const int xmin = std::max<int>(0, std::min(x1, x2));
+                std::pair<T, T> l, dl;
+
+                if constexpr(require_interp) {
+                    if (x1 < x2) {
+                        // find starting l and dl for every line
+                        l = std::make_pair(l01.first, l01.second);
+                        dl = std::make_pair((l02.first - l01.first) / T(x2 - x1), -l01.second / T(x2 - x1));
+
+                        // correct for the fact that the triangle might start off-screen
+                        l.first  += (x1 - xmin) * dl.first;
+                        l.second += (x1 - xmin) * dl.second;
+                    }
+                    else {
+                        // same here, except the bounds are flipped
+                        l = std::make_pair(l02.first, 0);
+                        dl = std::make_pair((l01.first - l02.first) / T(x1 - x2), l01.second / T(x1 - x2));
+                        l.first  += (x2 - xmin) * dl.first;
+                        l.second += (x2 - xmin) * dl.second;
+                    }
+                }
+
+                for (int x = xmin; x < xmax; x++) {
+                    if constexpr(require_interp) {
+                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), l);
+                        l.first  += dl.first;
+                        l.second += dl.second;
+                    }
+                    else {
+                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), {});
+                    }
                 }
                 x1 += dx1;
                 x2 += dx2;
                 y++;
+
+                if constexpr(require_interp) {
+                    l01.first  -= dl01;
+                    l01.second += dl01;
+                    l02.first  -= dl02;
+                }
             }
 
             // draw part from v1 down to v2 (along v0 -- v2 and v1 -- v2)
@@ -111,14 +174,47 @@ private:
             x1 = _v1.x[0];  // just to be sure (should already be approx. the right value)
             dx1 = T(_v2.x[0] - _v1.x[0]) / T(_v2.x[1] - _v1.x[1]);
 
+            std::pair<T, T> l12 = std::make_pair(1, 0);
+            const T dl12 = 1 / T(_v2.x[1] - _v1.x[1]);
+
             while (y < ymax_) {
                 const int xmax = std::min<int>(acleris.width, std::max(x1, x2) + 1);
-                for (int x = std::max<int>(0, std::min(x1, x2)); x < xmax; x++) {
-                    acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height));
+                const int xmin = std::max<int>(0, std::min(x1, x2));
+                std::pair<T, T> l, dl;
+
+                if constexpr(require_interp) {
+                    if (x1 < x2) {
+                        l = std::make_pair(0, l12.first);
+                        dl = std::make_pair(l02.first / T(x2 - x1), -l12.first / T(x2 - x1));
+                        l.first  += (x1 - xmin) * dl.first;
+                        l.second += (x1 - xmin) * dl.second;
+                    }
+                    else {
+                        l = std::make_pair(l02.first, 0);
+                        dl = std::make_pair(-l02.first / T(x1 - x2), l12.first / T(x1 - x2));
+                        l.first  += (x2 - xmin) * dl.first;
+                        l.second += (x2 - xmin) * dl.second;
+                    }
+                }
+
+                for (int x = xmin; x < xmax; x++) {
+                    if constexpr(require_interp) {
+                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), l);
+                        l.first  += dl.first;
+                        l.second += dl.second;
+                    }
+                    else {
+                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), {});
+                    }
                 }
                 x1 += dx1;
                 x2 += dx2;
                 y++;
+
+                if constexpr(require_interp) {
+                    l12.first -= dl12;
+                    l02.first -= dl02;
+                }
             }
         }
     };

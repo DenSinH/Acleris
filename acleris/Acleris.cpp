@@ -130,16 +130,16 @@ void Acleris::SDLRun(std::function<void(int, int)> update) {
                     return;
                 }
             }
-
-            int x, y;
-            SDL_GetMouseState(&x, &y);
-
-            update(x, y);
-
-            SDL_RenderClear(renderer);
-            SDL_UpdateTexture(texture, nullptr, (const void *)screen.data(), 4 * width);
-            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-            SDL_RenderPresent(renderer);
         }
+
+        int x, y;
+        SDL_GetMouseState(&x, &y);
+
+        update(x, y);
+
+        SDL_RenderClear(renderer);
+        SDL_UpdateTexture(texture, nullptr, (const void *)screen.data(), 4 * width);
+        SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+        SDL_RenderPresent(renderer);
     }
 }

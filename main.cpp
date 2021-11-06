@@ -2,6 +2,7 @@
 #include "acleris/Shapes.h"
 #include "acleris/Shapes.h"
 
+
 #undef main
 int main() {
     Acleris rasterizer(1280, 720);
