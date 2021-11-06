@@ -4,6 +4,7 @@
 #include "util/Tuple.h"
 #include "Acleris.h"
 #include "Vertex.h"
+#include "Color.h"
 
 
 template<typename V0>
@@ -15,6 +16,8 @@ struct Point {
 private:
     template<typename F>
     struct FragmentImpl {
+        static_assert(std::is_same_v<util::func_return_t<F>, Color>);
+
         const V0& v0;
         const F& func;
 
@@ -23,7 +26,7 @@ private:
 
             if (acleris.InBounds(v0)) {
                 auto args = util::slice_tuple<std::tuple_size_v<util::func_args_t<F>>>(v0.args);
-                acleris.screen(acleris.width * v0.x[0], acleris.height * v0.x[1]) = std::apply(func, args);
+                acleris.screen(acleris.width * v0.x[0], acleris.height * v0.x[1]) = std::apply(func, args).ToRGBA8();
             }
         }
     };
@@ -34,7 +37,7 @@ public:
         return FragmentImpl<F>{v0, func};
     }
 
-    auto Color(std::uint32_t color) {
+    auto Color(Color color) {
         auto func = [=]{ return color; };
         return Fragment<decltype(func)>(func);
     }

@@ -18,8 +18,10 @@ struct Line {
 
 
 private:
-    template<bool require_interp = true, typename F = std::uint32_t (*)(), typename T = std::common_type_t<typename V0::type, typename V1::type>>
+    template<bool require_interp = true, typename F = Color (*)(), typename T = std::common_type_t<typename V0::type, typename V1::type>>
     struct FragmentImpl {
+        static_assert(std::is_same_v<util::func_return_t<F>, Color>);
+
         const V0& v0;
         const V1& v1;
         const F& func;
@@ -109,19 +111,19 @@ private:
             T l0 = 0;
             if constexpr(xmajor) {
                 for (int x_ = int(x); x_ < _v1.x[0] && acleris.InBounds(x_, int(y)); x_++) {
-                    acleris.screen(int(x_), int(y)) = Interp(x_ / T(acleris.width), y / T(acleris.height), l0);
+                    acleris.screen(int(x_), int(y)) = Interp(x_ / T(acleris.width), y / T(acleris.height), l0).ToRGBA8();
                     y += dy;
                     if constexpr(require_interp) {
-                        l0 + dl;
+                        l0 += dl;
                     }
                 }
             }
             else {
                 for (int x_ = int(x); x_ < _v1.x[0] && acleris.InBounds(int(y), x_); x_++) {
-                    acleris.screen(int(y), int(x_)) = Interp(y / T(acleris.width), x_ / T(acleris.height), l0);
+                    acleris.screen(int(y), int(x_)) = Interp(y / T(acleris.width), x_ / T(acleris.height), l0).ToRGBA8();
                     y += dy;
                     if constexpr(require_interp) {
-                        l0 + dl;
+                        l0 += dl;
                     }
                 }
             }
@@ -131,7 +133,6 @@ private:
         void Draw(Acleris& acleris) {
             static_assert(V0::dim == 2);
             static_assert(V1::dim == 2);
-            static_assert(V0::no_args == V1::no_args);
 
             // find out if the line is x-major or y-major
             // |y1 - y0| < |x1 - x0| <==> x-major (not steep)
@@ -151,7 +152,7 @@ public:
         return FragmentImpl<true, F>{v0, v1, func};
     }
 
-    auto Color(std::uint32_t color) {
+    auto Color(Color color) {
         const auto func = [=]{ return color; };
         return FragmentImpl<false, decltype(func)>{v0, v1, func};
     }

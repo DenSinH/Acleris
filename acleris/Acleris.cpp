@@ -119,6 +119,8 @@ void Acleris::SDLRun(std::function<void(int, int)> update) {
     auto renderer = (SDL_Renderer*)SDLMakeRenderer(window);
     auto texture = (SDL_Texture*)SDLMakeTexture(renderer);
 
+    SDL_GL_SetSwapInterval(0);
+
     while (true) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {

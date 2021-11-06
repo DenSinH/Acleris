@@ -5,8 +5,7 @@
 #include "util/Algorithm.h"
 #include "Acleris.h"
 #include "Vertex.h"
-
-#include <cmath>
+#include "Color.h"
 
 
 template<typename V0, typename V1, typename V2>
@@ -18,12 +17,15 @@ struct Triangle {
     Triangle(const V0& v0, const V1& v1, const V2& v2) : v0(v0), v1(v1), v2(v2) { }
 
 private:
-    template<bool require_interp = true, typename F = std::uint32_t (*)(), typename T = std::common_type_t<typename V0::type, typename V1::type>>
+    template<bool require_interp = true, typename F = Color (*)(), typename T = std::common_type_t<typename V0::type, typename V1::type>>
     struct FragmentImpl {
+        static_assert(std::is_same_v<util::func_return_t<F>, Color>);
+
         const V0& v0;
         const V1& v1;
         const V2& v2;
         const F& func;
+
     private:
         auto Interp(T x, T y, const std::pair<T, T>& l) {
             static_assert(V0::dim == 2);
@@ -150,12 +152,12 @@ private:
 
                 for (int x = xmin; x < xmax; x++) {
                     if constexpr(require_interp) {
-                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), l);
+                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), l).ToRGBA8();
                         l.first  += dl.first;
                         l.second += dl.second;
                     }
                     else {
-                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), {});
+                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), {}).ToRGBA8();
                     }
                 }
                 x1 += dx1;
@@ -199,12 +201,12 @@ private:
 
                 for (int x = xmin; x < xmax; x++) {
                     if constexpr(require_interp) {
-                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), l);
+                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), l).ToRGBA8();
                         l.first  += dl.first;
                         l.second += dl.second;
                     }
                     else {
-                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), {});
+                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), {}).ToRGBA8();
                     }
                 }
                 x1 += dx1;
@@ -224,7 +226,7 @@ public:
         return FragmentImpl<true, F>{v0, v1, v2, func};
     }
 
-    auto Color(std::uint32_t color) {
+    auto Color(Color color) {
         const auto func = [&]{ return color; };
         return FragmentImpl<false, decltype(func)>{v0, v1, v2, func};
     }
