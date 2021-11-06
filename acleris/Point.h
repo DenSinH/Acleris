@@ -42,3 +42,21 @@ public:
         return Fragment<decltype(func)>(func);
     }
 };
+
+template<typename V0, typename T, size_t n>
+requires (V0::dim == n)
+Point<V0> operator+(const Point<V0>& p, const Vector<T, n>& v) {
+    return Point<V0>{p.v0 + v};
+}
+
+template<typename V0, typename T, size_t n>
+requires (V0::dim == n)
+Point<V0> operator+(const Vector<T, n>& v, const Point<V0>& p) {
+    return p + v;
+}
+
+template<typename V0, typename T, size_t n>
+requires (V0::dim == n)
+Point<V0> operator-(const Point<V0>& p, const Vector<T, n>& v) {
+    return Point<V0>{p.v0 - v};
+}

@@ -229,3 +229,22 @@ public:
         return FragmentImpl<false, decltype(func)>{v0, v1, v2, func};
     }
 };
+
+
+template<typename V0, typename V1, typename V2, typename T, size_t n>
+requires (V0::dim == n) && (V1::dim == n) && (V2::dim == n)
+Triangle<V0, V1, V2> operator+(const Triangle<V0, V1, V2>& t, const Vector<T, n>& v) {
+    return Triangle<V0, V1, V2>{t.v0 + v, t.v1 + v, t.v2 + v};
+}
+
+template<typename V0, typename V1, typename V2, typename T, size_t n>
+requires (V0::dim == n) && (V1::dim == n) && (V2::dim == n)
+Triangle<V0, V1, V2> operator+(const Vector<T, n>& v, const Triangle<V0, V1, V2>& t) {
+    return t + v;
+}
+
+template<typename V0, typename V1, typename V2, typename T, size_t n>
+requires (V0::dim == n) && (V1::dim == n) && (V2::dim == n)
+Triangle<V0, V1, V2> operator-(const Triangle<V0, V1, V2>& t, const Vector<T, n>& v) {
+    return Triangle<V0, V1, V2>{t.v0 - v, t.v1 - v, t.v2 - v};
+}

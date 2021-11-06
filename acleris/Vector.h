@@ -15,10 +15,19 @@ struct Vector {
     Vector(std::array<T, n> x) : x{std::move(x)} { }
 
     template<typename S>
-    Vector<std::common_type_t<T, S>, n> operator+(const Vector<S, n>& other) const {
-        Vector<std::common_type_t<T, S>, n> result{};
+    Vector<T, n> operator+(const Vector<S, n>& other) const {
+        Vector<T, n> result;
         for (int i = 0; i < n; i++) {
             result.x[i] = x[i] + other[i];
+        }
+        return result;
+    }
+
+    template<typename S>
+    Vector<T, n> operator-(const Vector<S, n>& other) const {
+        Vector<T, n> result;
+        for (int i = 0; i < n; i++) {
+            result.x[i] = x[i] - other[i];
         }
         return result;
     }

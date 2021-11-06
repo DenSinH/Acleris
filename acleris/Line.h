@@ -156,3 +156,21 @@ public:
         return FragmentImpl<false, decltype(func)>{v0, v1, func};
     }
 };
+
+template<typename V0, typename V1, typename T, size_t n>
+requires (V0::dim == n) && (V1::dim == n)
+Line<V0, V1> operator+(const Line<V0, V1>& l, const Vector<T, n>& v) {
+    return Line<V0, V1>{l.v0 + v, l.v1 + v};
+}
+
+template<typename V0, typename V1, typename T, size_t n>
+requires (V0::dim == n) && (V1::dim == n)
+Line<V0, V1> operator+(const Vector<T, n>& v, const Line<V0, V1>& l) {
+    return l + v;
+}
+
+template<typename V0, typename V1, typename T, size_t n>
+requires (V0::dim == n) && (V1::dim == n)
+Line<V0, V1> operator-(const Line<V0, V1>& l, const Vector<T, n>& v) {
+    return Line<V0, V1>{l.v0 - v, l.v1 - v};
+}

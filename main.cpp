@@ -23,11 +23,11 @@ int main() {
         auto v1 = MakeVertex<float, 2>({0.75, 0.75}, Color{1.0, 0.0, 0.0}, 2);
         auto v2 = MakeVertex<float, 2>({1, 0}, Color{0.0, 0.0, 1.0});
 
-        (mat * Triangle(v0, v1, v2)).Fragment([](Color c) {
+        (mat * Triangle(v0, v1, v2) + Vector<float, 2>{0.5, 0.5}).Fragment([](Color c) {
             return c;
         }).Draw(rasterizer);
 
-        (mat2 * Line(v0, v1)).Fragment([](Color c) {
+        (mat2 * Line(v0, v1) - Vector<float, 2>{0.1, 0.1}).Fragment([](Color c) {
             return c;
         }).Draw(rasterizer);
 
