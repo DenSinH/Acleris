@@ -1,6 +1,9 @@
 #pragma once
 
 #include "util/Point.h"
+#include "util/Algorithm.h"
+#include "util/Func.h"
+#include "util/Tuple.h"
 #include "Acleris.h"
 #include "Vertex.h"
 
@@ -23,7 +26,6 @@ private:
         auto Interp(T x, T y) {
             static_assert(V0::dim == 2);
             static_assert(V1::dim == 2);
-            static_assert(V0::no_args == V1::no_args);
 
             if constexpr(require_interp) {
                 const T len = (v1.x[0] - v0.x[0]) * (v1.x[0] - v0.x[0]) + (v1.x[1] - v0.x[1]) * (v1.x[1] - v0.x[1]);
@@ -34,15 +36,21 @@ private:
                     return l0 * x + l1 * y;
                 };
 
+                // we might have vertices with too many extra arguments / different sizes
+                constexpr auto min_size = util::min(V0::no_args, V1::no_args, std::tuple_size_v<util::func_args_t<F>>);
+
                 auto args = std::apply([&](const auto&... x){
                     return std::apply([&](const auto&... y){
                         return std::make_tuple(op(x, y)...);
-                    }, v1.args);
-                }, v0.args);
+                    }, util::slice_tuple<min_size>(v1.args));
+                }, util::slice_tuple<min_size>(v0.args));
 
                 return std::apply(func, args);
             }
-            return std::apply(func, v0.args);
+            else {
+                auto args = util::slice_tuple<util::tuple_size(std::make_tuple<util::func_args_t<F>>())>(v0.args);
+                return std::apply(func, args);
+            }
         }
 
         template<bool xmajor>

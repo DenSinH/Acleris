@@ -1,6 +1,9 @@
 #pragma once
 
 #include "util/Point.h"
+#include "util/Func.h"
+#include "util/Tuple.h"
+#include "util/Algorithm.h"
 #include "Acleris.h"
 #include "Vertex.h"
 
@@ -24,14 +27,11 @@ private:
         auto Interp(T x, T y) {
             static_assert(V0::dim == 2);
             static_assert(V1::dim == 2);
-            static_assert(V0::no_args == V1::no_args);
 
             if constexpr(require_interp) {
                 static_assert(V0::dim == 2);
                 static_assert(V1::dim == 2);
                 static_assert(V2::dim == 2);
-                static_assert(V0::no_args == V1::no_args);
-                static_assert(V0::no_args == V2::no_args);
 
                 auto l = BarycentricInterp(x, y, v0, v1, v2);
                 const T l0 = l.first;
@@ -42,25 +42,31 @@ private:
                     return l0 * x + l1 * y + l2 * z;
                 };
 
+                // we might have vertices with too many extra arguments / different sizes
+                constexpr auto min_size = util::min(
+                        V0::no_args, V1::no_args, V2::no_args, std::tuple_size_v<util::func_args_t<F>>
+                );
+
                 auto args = std::apply([&](const auto&... x){
                     return std::apply([&](const auto&... y){
                         return std::apply([&](const auto&... z){
                             return std::make_tuple(op(x, y, z)...);
-                        }, v2.args);
-                    }, v1.args);
-                }, v0.args);
+                        }, util::slice_tuple<min_size>(v2.args));
+                    }, util::slice_tuple<min_size>(v1.args));
+                }, util::slice_tuple<min_size>(v0.args));
 
                 return std::apply(func, args);
             }
-            return std::apply(func, v0.args);
+            else {
+                auto args = util::slice_tuple<std::tuple_size_v<util::func_args_t<F>>>(v0.args);
+                return std::apply(func, args);
+            }
         }
     public:
         void Draw(Acleris& acleris) {
             static_assert(V0::dim == 2);
             static_assert(V1::dim == 2);
             static_assert(V2::dim == 2);
-            static_assert(V0::no_args == V1::no_args);
-            static_assert(V0::no_args == V2::no_args);
 
             util::Point<T, 2> _v0 = {v0.x[0] * acleris.width, v0.x[1] * acleris.height};
             util::Point<T, 2> _v1 = {v1.x[0] * acleris.width, v1.x[1] * acleris.height};

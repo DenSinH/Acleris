@@ -26,8 +26,6 @@ std::pair<T, T> BarycentricInterp(T x, T y, const V0& v0, const V1& v1, const V2
     static_assert(V0::dim == 2);
     static_assert(V1::dim == 2);
     static_assert(V2::dim == 2);
-    static_assert(V0::no_args == V1::no_args);
-    static_assert(V0::no_args == V2::no_args);
 
     // barycentric coordinates: https://en.wikipedia.org/wiki/Barycentric_coordinate_system#Edge_approach
     const T det = T(v1.x[1] - v2.x[1]) * T(v0.x[0] - v2.x[0]) + T(v2.x[0] - v1.x[0]) * T(v0.x[1] - v2.x[1]);

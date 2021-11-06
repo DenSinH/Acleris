@@ -8,8 +8,8 @@ int main() {
 
     rasterizer.SDLRun([&](int x, int y) {
         rasterizer.Clear();
-        auto v0 = MakeVertex<float, 2>({0.25, 0.25}, 0.0, 1.0, 0.0);
-        auto v1 = MakeVertex<float, 2>({0.75, 0.75}, 1.0, 0.0, 0.0);
+        auto v0 = MakeVertex<float, 2>({0.25, 0.25}, 0.0, 1.0, 0.0, 2, 0);
+        auto v1 = MakeVertex<float, 2>({0.75, 0.75}, 1.0, 0.0, 0.0, 2);
         auto v2 = MakeVertex<float, 2>({1, 0}, 0.0, 0.0, 1.0);
 
 //        Point(v0).Color(0xffff'ffff).Draw(rasterizer);
