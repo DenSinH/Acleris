@@ -9,7 +9,7 @@
 
 template<typename V0>
 struct Point {
-    const V0& v0;
+    const V0 v0;
 
     Point(const V0& v0) : v0(v0) { }
 

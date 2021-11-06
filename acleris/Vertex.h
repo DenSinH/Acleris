@@ -19,6 +19,11 @@ struct Vertex {
             x{std::move(x)}, args{args...} {
 
     }
+
+    Vertex(Vector<T, n> x, Args... args) :
+            x{std::move(x)}, args{args...} {
+
+    }
 };
 
 template<typename T, int n, typename... Args>

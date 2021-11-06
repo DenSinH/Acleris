@@ -6,13 +6,23 @@ add_library(Acleris STATIC
         util/Format.h
         util/StaticFor.h
         util/NArray.h
-        )
+        Color.h
+        Line.h
+        Matrix.h
+        Point.h
+        Shapes.h
+        Triangle.h
+        Vector.h
+        Vertex.h
+)
 
 if (!${SDL2_FOUND})
     message(FATAL "Could not find SDL2")
 endif()
 
-set(${CMAKE_CXX_FLAGS} "${CMAKE_CXX_FLAGS} -O2")
+set(${CMAKE_CXX_FLAGS} "${CMAKE_CXX_FLAGS} -std=c++20")
+set(${CMAKE_CXX_FLAGS_DEBUG} "${CMAKE_CXX_FLAGS_DEBUG} -O2")
+set(${CMAKE_CXX_FLAGS_RELEASE} "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 message(STATUS "Found SDL at ${SDL2_INCLUDE_DIR}")
 

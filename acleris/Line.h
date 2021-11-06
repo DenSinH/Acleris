@@ -11,11 +11,10 @@
 
 template<typename V0, typename V1>
 struct Line {
-    const V0& v0;
-    const V1& v1;
+    const V0 v0;
+    const V1 v1;
 
     Line(const V0& v0, const V1& v1) : v0(v0), v1(v1) { }
-
 
 private:
     template<bool require_interp = true, typename F = Color (*)(), typename T = std::common_type_t<typename V0::type, typename V1::type>>

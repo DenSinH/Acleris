@@ -10,9 +10,9 @@
 
 template<typename V0, typename V1, typename V2>
 struct Triangle {
-    const V0& v0;
-    const V1& v1;
-    const V2& v2;
+    const V0 v0;
+    const V1 v1;
+    const V2 v2;
 
     Triangle(const V0& v0, const V1& v1, const V2& v2) : v0(v0), v1(v1), v2(v2) { }
 
@@ -30,11 +30,9 @@ private:
         auto Interp(T x, T y, const std::pair<T, T>& l) {
             static_assert(V0::dim == 2);
             static_assert(V1::dim == 2);
+            static_assert(V2::dim == 2);
 
             if constexpr(require_interp) {
-                static_assert(V0::dim == 2);
-                static_assert(V1::dim == 2);
-                static_assert(V2::dim == 2);
 
                 const T l0 = l.first;
                 const T l1 = l.second;
