@@ -38,6 +38,7 @@ struct NVect {
     std::array<size_t, n + 1> stride;
 
     template<typename... Args>
+    requires (sizeof...(Args) == n)
     NVect(Args... args) :
             base{},
             stride{transpose ? stride_t{1, (size_t)args...} : stride_t{(size_t)args..., 1}} {
@@ -54,6 +55,7 @@ struct NVect {
     }
 
     template<typename... Args>
+    requires (sizeof...(Args) == n) && (std::is_integral_v<Args> && ...)
     T& operator()(Args... args) {
         static_assert(sizeof...(Args) == n);
         size_t offs = 0;
@@ -64,6 +66,7 @@ struct NVect {
     }
 
     template<typename... Args>
+    requires (sizeof...(Args) == n) && (std::is_integral_v<Args> && ...)
     const T& operator()(Args... args) const { this(args...); }
 
     T* data() { return base.data(); }

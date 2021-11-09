@@ -47,7 +47,7 @@ private:
                         V0::no_args, V1::no_args, V2::no_args, std::tuple_size_v<util::func_args_t<F>>
                 );
 
-                auto args = std::apply([&](const auto&... x){
+                const auto args = std::apply([&](const auto&... x){
                     return std::apply([&](const auto&... y){
                         return std::apply([&](const auto&... z){
                             return std::make_tuple(op(x, y, z)...);
@@ -58,7 +58,7 @@ private:
                 return std::apply(func, args);
             }
             else {
-                auto args = util::slice_tuple<std::tuple_size_v<util::func_args_t<F>>>(v0.args);
+                const auto args = util::slice_tuple<std::tuple_size_v<util::func_args_t<F>>>(v0.args);
                 return std::apply(func, args);
             }
         }
@@ -72,16 +72,27 @@ private:
             Vector<T, 2> _v1 = {v1.x[0] * acleris.width, v1.x[1] * acleris.height};
             Vector<T, 2> _v2 = {v2.x[0] * acleris.width, v2.x[1] * acleris.height};
 
+            std::array<int, 3> _idx{0, 1, 2};
+
             // sort by y coordinate
             if (_v1.x[1] < _v0.x[1]) {
                 std::swap(_v0, _v1);
+                std::swap(_idx[0], _idx[1]);
             }
             if (_v2.x[1] < _v0.x[1]) {
                 std::swap(_v0, _v2);
+                std::swap(_idx[0], _idx[2]);
             }
             if (_v2.x[1] < _v1.x[1]) {
                 std::swap(_v1, _v2);
+                std::swap(_idx[1], _idx[2]);
             }
+
+            std::array<int, 3> idx{};
+            for (int i = 0; i < 3; i++) {
+                idx[_idx[i]] = i;
+            }
+
             // first: go from top point to middle point
             T x1 = _v0.x[0], x2 = _v0.x[0];  // x1 will end up at v1 and x2 at v2
             T dx2 = T(_v2.x[0] - _v0.x[0]) / T(_v2.x[1] - _v0.x[1]);
@@ -120,8 +131,8 @@ private:
             const T dl02 = 1.0 / T(_v2.x[1] - _v0.x[1]);
 
             // starting line might not be v0.y
-            std::pair<T, T> l01 = std::make_pair(1 - dl01 * (_v0.x[1] - y), 0);
-            std::pair<T, T> l02 = std::make_pair(1 - dl02 * (_v0.x[1] - y), 0);
+            std::pair<T, T> l01 = std::make_pair(1 - dl01 * (y - _v0.x[1]), dl01 * (y - _v0.x[1]));
+            std::pair<T, T> l02 = std::make_pair(1 - dl02 * (y - _v0.x[1]), 0);
 
             while (y < ymax) {
                 // x bounds
@@ -136,26 +147,30 @@ private:
                         dl = std::make_pair((l02.first - l01.first) / T(x2 - x1), -l01.second / T(x2 - x1));
 
                         // correct for the fact that the triangle might start off-screen
-                        l.first  += (x1 - xmin) * dl.first;
-                        l.second += (x1 - xmin) * dl.second;
+                        l.first  += (xmin - x1) * dl.first;
+                        l.second += (xmin - x1) * dl.second;
                     }
                     else {
                         // same here, except the bounds are flipped
                         l = std::make_pair(l02.first, 0);
                         dl = std::make_pair((l01.first - l02.first) / T(x1 - x2), l01.second / T(x1 - x2));
-                        l.first  += (x2 - xmin) * dl.first;
-                        l.second += (x2 - xmin) * dl.second;
+                        l.first  += (xmin - x2) * dl.first;
+                        l.second += (xmin - x2) * dl.second;
                     }
                 }
 
                 for (int x = xmin; x < xmax; x++) {
                     if constexpr(require_interp) {
-                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), l).ToRGBA8();
+                        const std::array<T, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
+                        acleris.screen(x, int(y)) = Interp(
+                                x / T(acleris.width), y / T(acleris.height),
+                                std::make_pair(l_[idx[0]], l_[idx[1]])
+                        ).ToRGBA8();
                         l.first  += dl.first;
                         l.second += dl.second;
                     }
                     else {
-                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), {}).ToRGBA8();
+                        acleris.screen(x, int(y)) = Interp(x / T(acleris.width), y / T(acleris.height), {}).ToRGBA8();
                     }
                 }
                 x1 += dx1;
@@ -186,25 +201,29 @@ private:
                     if (x1 < x2) {
                         l = std::make_pair(0, l12.first);
                         dl = std::make_pair(l02.first / T(x2 - x1), -l12.first / T(x2 - x1));
-                        l.first  += (x1 - xmin) * dl.first;
-                        l.second += (x1 - xmin) * dl.second;
+                        l.first  += (xmin - x1) * dl.first;
+                        l.second += (xmin - x1) * dl.second;
                     }
                     else {
                         l = std::make_pair(l02.first, 0);
                         dl = std::make_pair(-l02.first / T(x1 - x2), l12.first / T(x1 - x2));
-                        l.first  += (x2 - xmin) * dl.first;
-                        l.second += (x2 - xmin) * dl.second;
+                        l.first  += (xmin - x2) * dl.first;
+                        l.second += (xmin - x2) * dl.second;
                     }
                 }
 
                 for (int x = xmin; x < xmax; x++) {
                     if constexpr(require_interp) {
-                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), l).ToRGBA8();
+                        const std::array<T, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
+                        acleris.screen(x, int(y)) = Interp(
+                                x / T(acleris.width), y / T(acleris.height),
+                                std::make_pair(l_[idx[0]], l_[idx[1]])
+                        ).ToRGBA8();
                         l.first  += dl.first;
                         l.second += dl.second;
                     }
                     else {
-                        acleris.screen(x, y) = Interp(x / T(acleris.width), y / T(acleris.height), {}).ToRGBA8();
+                        acleris.screen(x, int(y)) = Interp(x / T(acleris.width), y / T(acleris.height), {}).ToRGBA8();
                     }
                 }
                 x1 += dx1;

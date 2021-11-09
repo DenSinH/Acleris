@@ -59,6 +59,8 @@ private:
 
             Vector<T, 2> _v0 = {v0.x[0] * acleris.width, v0.x[1] * acleris.height};
             Vector<T, 2> _v1 = {v1.x[0] * acleris.width, v1.x[1] * acleris.height};
+            T l0 = 0;
+
             if constexpr(!xmajor) {
                 std::swap(_v0.x[0], _v0.x[1]);
                 std::swap(_v1.x[0], _v1.x[1]);
@@ -67,6 +69,7 @@ private:
             // from left to right
             if (_v1.x[0] < _v0.x[0]) {
                 std::swap(_v0, _v1);
+                l0 = 1;
             }
 
             // initial coordinates
@@ -74,9 +77,12 @@ private:
             T dy = float(_v1.x[1] - _v0.x[1]) / float(_v1.x[0] - _v0.x[0]);
 
             const auto xbound = (xmajor ? acleris.width : acleris.height);
+            const T len = (_v1.x[0] - _v0.x[0]) * (_v1.x[0] - _v0.x[0]) + (_v1.x[1] - _v0.x[1]) * (_v1.x[1] - _v0.x[1]);
+            const T dl = (l0 ? -1 : 1) * std::sqrt((1 + dy * dy) / len);
             if (x < 0) {
                 // clip to screen boundary
                 y += -x * dy;
+                l0 += -x * dy * dl;
                 x = 0;
                 if (_v1.x[0] < 0) [[unlikely]] return;  // entire line is off screen
             }
@@ -89,6 +95,7 @@ private:
                 // entire line is off screen
                 if (dy < 0) [[unlikely]] return;
                 x += -y / dy;
+                l0 += (-y / dy) * dl;
 
                 // line ended before reaching screen
                 if (x > _v1.x[0]) [[unlikely]] return;
@@ -98,6 +105,7 @@ private:
                 // entire line is off screen
                 if (dy > 0) [[unlikely]] return;
                 x += (y - ybound) / dy;
+                l0 += ((y - ybound) / dy) * dl;
 
                 // line ended before reaching screen
                 if (x > _v1.x[0]) [[unlikely]] return;
@@ -105,9 +113,6 @@ private:
             }
 
             // need to flip coordinates for x/y major
-            const T len = (_v1.x[0] - _v0.x[0]) * (_v1.x[0] - _v0.x[0]) + (_v1.x[1] - _v0.x[1]) * (_v1.x[1] - _v0.x[1]);
-            const T dl = std::sqrt((1 + dy * dy) / len);
-            T l0 = 0;
             if constexpr(xmajor) {
                 for (int x_ = int(x); x_ < _v1.x[0] && acleris.InBounds(x_, int(y)); x_++) {
                     acleris.screen(int(x_), int(y)) = Interp(x_ / T(acleris.width), y / T(acleris.height), l0).ToRGBA8();

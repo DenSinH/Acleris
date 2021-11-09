@@ -15,6 +15,15 @@ struct Vector {
     Vector(std::array<T, n> x) : x{std::move(x)} { }
 
     template<typename S>
+    Vector<T, n> operator*(const S& other) const {
+        Vector<T, n> result;
+        for (int i = 0; i < n; i++) {
+            result.x[i] = x[i] * other;
+        }
+        return result;
+    }
+
+    template<typename S>
     Vector<T, n> operator+(const Vector<S, n>& other) const {
         Vector<T, n> result;
         for (int i = 0; i < n; i++) {
@@ -40,3 +49,9 @@ struct Vector {
         return x[index];
     }
 };
+
+
+template<typename T, size_t n, typename S>
+Vector<T, n> operator*(const S& other, const Vector<T, n>& v) {
+    return v * other;
+}

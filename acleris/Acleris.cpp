@@ -104,7 +104,7 @@ void* Acleris::SDLMakeWindow() {
 
 void* Acleris::SDLMakeRenderer(void* window) {
     return SDL_CreateRenderer(
-            (SDL_Window*)window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+            (SDL_Window*)window, -1, SDL_RENDERER_ACCELERATED
     );
 }
 

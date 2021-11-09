@@ -60,3 +60,14 @@ public:
         return Triangle<V0, V1, V2>(*this * t.v0, *this * t.v1, *this * t.v2);
     }
 };
+
+template<typename T, int n, int m, typename S>
+Matrix<T, n, m> operator*(const S& other, const Matrix<T, n, m>& mat) {
+    Matrix<T, n, m> result;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            result[i][j] = other * mat[i][j];
+        }
+    }
+    return std::move(result);
+}
