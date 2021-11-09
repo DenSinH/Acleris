@@ -23,7 +23,7 @@ private:
 
         const V0& v0;
         const V1& v1;
-        const F& func;
+        const F func;
     private:
         auto Interp(T x, T y, const T& l0) {
             static_assert(V0::dim == 2);

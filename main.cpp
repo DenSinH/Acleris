@@ -28,11 +28,11 @@ int main() {
         (mat * (Triangle(v0, v1, v2) - offs) + offs).Fragment([](Color c) {
             return c;
         }).Draw(rasterizer);
+        // (mat * (Triangle(v0, v1, v2) - offs) + offs).Color({1.0, 1.0, 1.0}).Draw(rasterizer);
 
-        ((Line(v0, v1) - offs) + 0.1 * mat * offs).Fragment([](Color c) {
-            return c;
-        }).Draw(rasterizer);
-
+//        ((Line(v0, v1) - offs) + 0.1 * mat * offs).Fragment([](Color c) {
+//            return c;
+//        }).Draw(rasterizer);
     });
 
     return 0;

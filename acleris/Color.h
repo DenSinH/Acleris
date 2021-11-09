@@ -30,7 +30,7 @@ struct Color {
         };
     }
 
-    std::uint32_t ToRGBA8() {
+    std::uint32_t ToRGBA8() const {
         return (
                 (std::uint32_t(0xff * Clamp(r)) << 24)
                 | (std::uint32_t(0xff * Clamp(g)) << 16)
