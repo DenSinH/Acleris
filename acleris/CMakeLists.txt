@@ -8,11 +8,9 @@ add_library(Acleris STATIC
         util/NArray.h
         Color.h
         Line.h
-        Matrix.h
         Point.h
         Shapes.h
         Triangle.h
-        Vector.h
         Vertex.h
 )
 

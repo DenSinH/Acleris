@@ -5,6 +5,7 @@
 #include "util/Tuple.h"
 #include "Acleris.h"
 #include "Vertex.h"
+#include "Color.h"
 
 #include <cmath>
 
@@ -57,34 +58,38 @@ private:
         void Draw(Acleris& acleris) {
             // for y-major lines, the algorithm is precisely the same, except x and y are swapped
 
-            Vector<T, 2> _v0 = {v0.x[0] * acleris.width, v0.x[1] * acleris.height};
-            Vector<T, 2> _v1 = {v1.x[0] * acleris.width, v1.x[1] * acleris.height};
+            const vmath::Vector<T, 2> screen_dim = {acleris.width, acleris.height};
+            auto _v0 = v0.x * screen_dim;
+            auto _v1 = v1.x * screen_dim;
             T l0 = 0;
 
             if constexpr(!xmajor) {
-                std::swap(_v0.x[0], _v0.x[1]);
-                std::swap(_v1.x[0], _v1.x[1]);
+                // todo: do this better
+                _v0 = {_v0.template get<1>(), _v0.template get<0>()};
+                _v1 = {_v1.template get<1>(), _v1.template get<0>()};
             }
 
             // from left to right
-            if (_v1.x[0] < _v0.x[0]) {
+            if (_v1.template get<0>() < _v0.template get<0>()) {
                 std::swap(_v0, _v1);
                 l0 = 1;
             }
 
             // initial coordinates
-            T x = _v0.x[0], y = _v0.x[1];
-            T dy = float(_v1.x[1] - _v0.x[1]) / float(_v1.x[0] - _v0.x[0]);
+            T x = _v0.template get<0>(), y = _v0.template get<1>();
+            auto diff = _v1 - _v0;
+            T dy = T(diff.template get<1>()) / T(diff.template get<0>());
 
             const auto xbound = (xmajor ? acleris.width : acleris.height);
-            const T len = (_v1.x[0] - _v0.x[0]) * (_v1.x[0] - _v0.x[0]) + (_v1.x[1] - _v0.x[1]) * (_v1.x[1] - _v0.x[1]);
+            const auto square = diff * diff;
+            const T len = square.template get<0>() + square.template get<1>();
             const T dl = (l0 ? -1 : 1) * std::sqrt((1 + dy * dy) / len);
             if (x < 0) {
                 // clip to screen boundary
                 y += -x * dy;
                 l0 += -x * dy * dl;
                 x = 0;
-                if (_v1.x[0] < 0) [[unlikely]] return;  // entire line is off screen
+                if (_v1.template get<0>() < 0) [[unlikely]] return;  // entire line is off screen
             }
             else if (x > xbound) {
                 return;
@@ -98,7 +103,7 @@ private:
                 l0 += (-y / dy) * dl;
 
                 // line ended before reaching screen
-                if (x > _v1.x[0]) [[unlikely]] return;
+                if (x > _v1.template get<0>()) [[unlikely]] return;
                 y = 0;
             }
             else if (y > ybound) {
@@ -108,14 +113,14 @@ private:
                 l0 += ((y - ybound) / dy) * dl;
 
                 // line ended before reaching screen
-                if (x > _v1.x[0]) [[unlikely]] return;
+                if (x > _v1.template get<0>()) [[unlikely]] return;
                 y = ybound;
             }
 
             // need to flip coordinates for x/y major
             if constexpr(xmajor) {
-                for (int x_ = int(x); x_ < _v1.x[0] && acleris.InBounds(x_, int(y)); x_++) {
-                    acleris.screen(int(x_), int(y)) = Interp(x_ / T(acleris.width), y / T(acleris.height), l0).ToRGBA8();
+                for (int x_ = int(x); x_ < _v1.template get<0>() && acleris.InBounds(x_, int(y)); x_++) {
+                    acleris.screen(int(x_), int(y)) = MakeRGBA8(Interp(x_ / T(acleris.width), y / T(acleris.height), l0));
                     y += dy;
                     if constexpr(require_interp) {
                         l0 += dl;
@@ -123,8 +128,8 @@ private:
                 }
             }
             else {
-                for (int x_ = int(x); x_ < _v1.x[0] && acleris.InBounds(int(y), x_); x_++) {
-                    acleris.screen(int(y), int(x_)) = Interp(y / T(acleris.width), x_ / T(acleris.height), l0).ToRGBA8();
+                for (int x_ = int(x); x_ < _v1.template get<0>() && acleris.InBounds(int(y), x_); x_++) {
+                    acleris.screen(int(y), int(x_)) = MakeRGBA8(Interp(y / T(acleris.width), x_ / T(acleris.height), l0));
                     y += dy;
                     if constexpr(require_interp) {
                         l0 += dl;
@@ -140,7 +145,8 @@ private:
 
             // find out if the line is x-major or y-major
             // |y1 - y0| < |x1 - x0| <==> x-major (not steep)
-            bool xmajor = std::abs(v1.x[0] - v0.x[0]) >= std::abs(v1.x[1] - v0.x[1]);
+            const auto diff = (v1.x - v0.x).abs();
+            bool xmajor = diff.template get<0>() >= diff.template get<1>();
             if (xmajor) {
                 Draw<true>(acleris);
             }
@@ -164,18 +170,18 @@ public:
 
 template<typename V0, typename V1, typename T, size_t n>
 requires (V0::dim == n) && (V1::dim == n)
-Line<V0, V1> operator+(const Line<V0, V1>& l, const Vector<T, n>& v) {
+Line<V0, V1> operator+(const Line<V0, V1>& l, const vmath::Vector<T, n>& v) {
     return Line<V0, V1>{l.v0 + v, l.v1 + v};
 }
 
 template<typename V0, typename V1, typename T, size_t n>
 requires (V0::dim == n) && (V1::dim == n)
-Line<V0, V1> operator+(const Vector<T, n>& v, const Line<V0, V1>& l) {
+Line<V0, V1> operator+(const vmath::Vector<T, n>& v, const Line<V0, V1>& l) {
     return l + v;
 }
 
 template<typename V0, typename V1, typename T, size_t n>
 requires (V0::dim == n) && (V1::dim == n)
-Line<V0, V1> operator-(const Line<V0, V1>& l, const Vector<T, n>& v) {
+Line<V0, V1> operator-(const Line<V0, V1>& l, const vmath::Vector<T, n>& v) {
     return Line<V0, V1>{l.v0 - v, l.v1 - v};
 }

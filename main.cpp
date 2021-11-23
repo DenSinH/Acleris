@@ -1,6 +1,6 @@
 #include "acleris/Acleris.h"
 #include "acleris/Shapes.h"
-#include "acleris/Matrix.h"
+#include "VMath/Matrix.h"
 
 #include <cmath>
 
@@ -15,24 +15,27 @@ int main() {
         rasterizer.Clear();
         t += 0.01;
 
-        auto v0 = MakeVertex<float, 2>({1, 0}, Color{0.0, 0.0, 1.0});
-        auto v1 = MakeVertex<float, 2>({0.75, 0.75}, Color{1.0, 0.0, 0.0}, 2);
-        auto v2 = MakeVertex<float, 2>({0.25, 0.25}, Color{0.0, 1.0, 0.0}, 2, 0);
+        auto v0 = MakeVertex<float, 2>({1, 0}, MakeColor(0.0, 0.0, 1.0));
+        auto v1 = MakeVertex<float, 2>({0.75, 0.75}, MakeColor(1.0, 0.0, 0.0), 2);
+        auto v2 = MakeVertex<float, 2>({0.25, 0.25}, MakeColor(0.0, 1.0, 0.0), 2, 0);
 
-        Matrix<float, 2, 2> mat{
+        vmath::Matrix<float, 2, 2> mat{
                 {std::cos(t), std::sin(t)},
                 {-std::sin(t), std::cos(t)}
         };
 
-        auto offs = Vector<float, 2>{0.5, 0.5};
-        (mat * (Triangle(v0, v1, v2) - offs) + offs).Fragment([](Color c) {
-            return c;
-        }).Draw(rasterizer);
-        // (mat * (Triangle(v0, v1, v2) - offs) + offs).Color({1.0, 1.0, 1.0}).Draw(rasterizer);
-
-//        ((Line(v0, v1) - offs) + 0.1 * mat * offs).Fragment([](Color c) {
+        auto offs = vmath::Vector<float, 2>{0.5, 0.5};
+//        (mat * (Triangle(v0, v1, v2) - offs) + offs).Fragment([](const Color& c) {
 //            return c;
 //        }).Draw(rasterizer);
+
+        // (mat * (Triangle(v0, v1, v2) - offs) + offs).Color({1.0, 1.0, 1.0}).Draw(rasterizer);
+
+//        ((Line(v0, v1) - offs) + 0.1 * mat * offs).Fragment([](const Color& c) {
+//            return c;
+//        }).Draw(rasterizer);
+
+        (mat * (Point(v2) - offs) + offs).Color(0xffff'ffff).Draw(rasterizer);
     });
 
     return 0;

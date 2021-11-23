@@ -1,0 +1,3 @@
+[submodule "VMath"]
+	path = VMath
+	url = https://github.com/DenSinH/VMath

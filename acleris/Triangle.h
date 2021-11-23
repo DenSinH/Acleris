@@ -68,22 +68,23 @@ private:
             static_assert(V1::dim == 2);
             static_assert(V2::dim == 2);
 
-            Vector<T, 2> _v0 = {v0.x[0] * acleris.width, v0.x[1] * acleris.height};
-            Vector<T, 2> _v1 = {v1.x[0] * acleris.width, v1.x[1] * acleris.height};
-            Vector<T, 2> _v2 = {v2.x[0] * acleris.width, v2.x[1] * acleris.height};
+            const vmath::Vector<T, 2> screen_dim = {acleris.width, acleris.height};
+            auto _v0 = v0.x * screen_dim;
+            auto _v1 = v1.x * screen_dim;
+            auto _v2 = v2.x * screen_dim;
 
             std::array<int, 3> _idx{0, 1, 2};
 
             // sort by y coordinate
-            if (_v1.x[1] < _v0.x[1]) {
+            if (_v1.template get<1>() < _v0.template get<1>()) {
                 std::swap(_v0, _v1);
                 std::swap(_idx[0], _idx[1]);
             }
-            if (_v2.x[1] < _v0.x[1]) {
+            if (_v2.template get<1>() < _v0.template get<1>()) {
                 std::swap(_v0, _v2);
                 std::swap(_idx[0], _idx[2]);
             }
-            if (_v2.x[1] < _v1.x[1]) {
+            if (_v2.template get<1>() < _v1.template get<1>()) {
                 std::swap(_v1, _v2);
                 std::swap(_idx[1], _idx[2]);
             }
@@ -94,11 +95,13 @@ private:
             }
 
             // first: go from top point to middle point
-            T x1 = _v0.x[0], x2 = _v0.x[0];  // x1 will end up at v1 and x2 at v2
-            T dx2 = T(_v2.x[0] - _v0.x[0]) / T(_v2.x[1] - _v0.x[1]);
-            T dx1 = T(_v1.x[0] - _v0.x[0]) / T(_v1.x[1] - _v0.x[1]);
+            T x1 = _v0.template get<0>(), x2 = _v0.template get<0>();  // x1 will end up at v1 and x2 at v2
+            const auto diff20 = _v2 - _v0;
+            const auto diff10 = _v1 - _v0;
+            T dx2 = T(diff20.template get<0>()) / T(diff20.template get<1>());
+            T dx1 = T(diff10.template get<0>()) / T(diff10.template get<1>());
 
-            T y = _v0.x[1];
+            T y = _v0.template get<1>();
             if (y < 0) {
                 x1 += -y * dx1;
                 x2 += -y * dx2;
@@ -106,7 +109,7 @@ private:
             }
 
             // draw part from v0 down to v1 (along v0 -- v1 and v0 -- v2)
-            const int ymax = std::min<int>(acleris.height, _v1.x[1]);
+            const int ymax = std::min<int>(acleris.height, _v1.template get<1>());
 
             /* Faster Barycentric interpolation:
              * Lerp between the edges, then between the bounds
@@ -127,12 +130,12 @@ private:
              * */
 
             // difference per line
-            const T dl01 = 1.0 / T(_v1.x[1] - _v0.x[1]);
-            const T dl02 = 1.0 / T(_v2.x[1] - _v0.x[1]);
+            const T dl01 = 1.0 / T(diff10.template get<1>());
+            const T dl02 = 1.0 / T(diff20.template get<1>());
 
             // starting line might not be v0.y
-            std::pair<T, T> l01 = std::make_pair(1 - dl01 * (y - _v0.x[1]), dl01 * (y - _v0.x[1]));
-            std::pair<T, T> l02 = std::make_pair(1 - dl02 * (y - _v0.x[1]), 0);
+            std::pair<T, T> l01 = std::make_pair(1 - dl01 * (y - _v0.template get<1>()), dl01 * (y - _v0.template get<1>()));
+            std::pair<T, T> l02 = std::make_pair(1 - dl02 * (y - _v0.template get<1>()), 0);
 
             while (y < ymax) {
                 // x bounds
@@ -162,10 +165,10 @@ private:
                 for (int x = xmin; x < xmax; x++) {
                     if constexpr(require_interp) {
                         const std::array<T, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
-                        acleris.screen(x, int(y)) = Interp(
+                        acleris.screen(x, int(y)) = MakeRGBA8(Interp(
                                 x / T(acleris.width), y / T(acleris.height),
                                 std::make_pair(l_[idx[0]], l_[idx[1]])
-                        ).ToRGBA8();
+                        ));
                         l.first  += dl.first;
                         l.second += dl.second;
                     }
@@ -185,12 +188,13 @@ private:
             }
 
             // draw part from v1 down to v2 (along v0 -- v2 and v1 -- v2)
-            const int ymax_ = std::min<int>(acleris.height, std::max(_v1.x[1], _v2.x[1]));
-            x1 = _v1.x[0];  // just to be sure (should already be approx. the right value)
-            dx1 = T(_v2.x[0] - _v1.x[0]) / T(_v2.x[1] - _v1.x[1]);
+            const int ymax_ = std::min<int>(acleris.height, std::max(_v1.template get<1>(), _v2.template get<1>()));
+            x1 = _v1.template get<0>();  // just to be sure (should already be approx. the right value)
+            const auto diff21 = _v2 - _v1;
+            dx1 = T(diff21.template get<0>()) / T(diff21.template get<1>());
 
             std::pair<T, T> l12 = std::make_pair(1, 0);
-            const T dl12 = 1 / T(_v2.x[1] - _v1.x[1]);
+            const T dl12 = 1 / T(diff21.template get<1>());
 
             while (y < ymax_) {
                 const int xmax = std::min<int>(acleris.width, std::max(x1, x2) + 1);
@@ -215,10 +219,10 @@ private:
                 for (int x = xmin; x < xmax; x++) {
                     if constexpr(require_interp) {
                         const std::array<T, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
-                        acleris.screen(x, int(y)) = Interp(
+                        acleris.screen(x, int(y)) = MakeRGBA8(Interp(
                                 x / T(acleris.width), y / T(acleris.height),
                                 std::make_pair(l_[idx[0]], l_[idx[1]])
-                        ).ToRGBA8();
+                        ));
                         l.first  += dl.first;
                         l.second += dl.second;
                     }
@@ -252,18 +256,18 @@ public:
 
 template<typename V0, typename V1, typename V2, typename T, size_t n>
 requires (V0::dim == n) && (V1::dim == n) && (V2::dim == n)
-Triangle<V0, V1, V2> operator+(const Triangle<V0, V1, V2>& t, const Vector<T, n>& v) {
+Triangle<V0, V1, V2> operator+(const Triangle<V0, V1, V2>& t, const vmath::Vector<T, n>& v) {
     return Triangle<V0, V1, V2>{t.v0 + v, t.v1 + v, t.v2 + v};
 }
 
 template<typename V0, typename V1, typename V2, typename T, size_t n>
 requires (V0::dim == n) && (V1::dim == n) && (V2::dim == n)
-Triangle<V0, V1, V2> operator+(const Vector<T, n>& v, const Triangle<V0, V1, V2>& t) {
+Triangle<V0, V1, V2> operator+(const vmath::Vector<T, n>& v, const Triangle<V0, V1, V2>& t) {
     return t + v;
 }
 
 template<typename V0, typename V1, typename V2, typename T, size_t n>
 requires (V0::dim == n) && (V1::dim == n) && (V2::dim == n)
-Triangle<V0, V1, V2> operator-(const Triangle<V0, V1, V2>& t, const Vector<T, n>& v) {
+Triangle<V0, V1, V2> operator-(const Triangle<V0, V1, V2>& t, const vmath::Vector<T, n>& v) {
     return Triangle<V0, V1, V2>{t.v0 - v, t.v1 - v, t.v2 - v};
 }
