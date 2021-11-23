@@ -17,7 +17,7 @@ struct Triangle {
     Triangle(const V0& v0, const V1& v1, const V2& v2) : v0(v0), v1(v1), v2(v2) { }
 
 private:
-    template<bool require_interp = true, typename F = Color (*)(), typename T = std::common_type_t<typename V0::type, typename V1::type>>
+    template<bool require_interp = true, typename F = Color (*)()>
     struct FragmentImpl {
         static_assert(std::is_same_v<util::func_return_t<F>, Color>);
 
@@ -27,16 +27,16 @@ private:
         const F func;
 
     private:
-        auto Interp(T x, T y, const std::pair<T, T>& l) {
+        auto Interp(float x, float y, const std::pair<float, float>& l) {
             static_assert(V0::dim == 2);
             static_assert(V1::dim == 2);
             static_assert(V2::dim == 2);
 
             if constexpr(require_interp) {
 
-                const T l0 = l.first;
-                const T l1 = l.second;
-                const T l2 = 1 - l0 - l1;
+                const float l0 = l.first;
+                const float l1 = l.second;
+                const float l2 = 1 - l0 - l1;
 
                 const auto op = [&](const auto& x, const auto& y, const auto& z) {
                     return l0 * x + l1 * y + l2 * z;
@@ -68,7 +68,7 @@ private:
             static_assert(V1::dim == 2);
             static_assert(V2::dim == 2);
 
-            const vmath::Vector<T, 2> screen_dim = {acleris.width, acleris.height};
+            const vmath::Vector<float, 2> screen_dim = {acleris.width, acleris.height};
             auto _v0 = v0.x * screen_dim;
             auto _v1 = v1.x * screen_dim;
             auto _v2 = v2.x * screen_dim;
@@ -95,13 +95,13 @@ private:
             }
 
             // first: go from top point to middle point
-            T x1 = _v0.template get<0>(), x2 = _v0.template get<0>();  // x1 will end up at v1 and x2 at v2
+            float x1 = _v0.template get<0>(), x2 = _v0.template get<0>();  // x1 will end up at v1 and x2 at v2
             const auto diff20 = _v2 - _v0;
             const auto diff10 = _v1 - _v0;
-            T dx2 = T(diff20.template get<0>()) / T(diff20.template get<1>());
-            T dx1 = T(diff10.template get<0>()) / T(diff10.template get<1>());
+            float dx2 = diff20.template get<0>() / diff20.template get<1>();
+            float dx1 = diff10.template get<0>() / diff10.template get<1>();
 
-            T y = _v0.template get<1>();
+            float y = _v0.template get<1>();
             if (y < 0) {
                 x1 += -y * dx1;
                 x2 += -y * dx2;
@@ -130,24 +130,24 @@ private:
              * */
 
             // difference per line
-            const T dl01 = 1.0 / T(diff10.template get<1>());
-            const T dl02 = 1.0 / T(diff20.template get<1>());
+            const float dl01 = 1.0 / diff10.template get<1>();
+            const float dl02 = 1.0 / diff20.template get<1>();
 
             // starting line might not be v0.y
-            std::pair<T, T> l01 = std::make_pair(1 - dl01 * (y - _v0.template get<1>()), dl01 * (y - _v0.template get<1>()));
-            std::pair<T, T> l02 = std::make_pair(1 - dl02 * (y - _v0.template get<1>()), 0);
+            std::pair<float, float> l01 = std::make_pair(1 - dl01 * (y - _v0.template get<1>()), dl01 * (y - _v0.template get<1>()));
+            std::pair<float, float> l02 = std::make_pair(1 - dl02 * (y - _v0.template get<1>()), 0);
 
             while (y < ymax) {
                 // x bounds
                 const int xmax = std::min<int>(acleris.width, std::max(x1, x2) + 1);
                 const int xmin = std::max<int>(0, std::min(x1, x2));
-                std::pair<T, T> l, dl;
+                std::pair<float, float> l, dl;
 
                 if constexpr(require_interp) {
                     if (x1 < x2) {
                         // find starting l and dl for every line
                         l = std::make_pair(l01.first, l01.second);
-                        dl = std::make_pair((l02.first - l01.first) / T(x2 - x1), -l01.second / T(x2 - x1));
+                        dl = std::make_pair((l02.first - l01.first) / (x2 - x1), -l01.second / (x2 - x1));
 
                         // correct for the fact that the triangle might start off-screen
                         l.first  += (xmin - x1) * dl.first;
@@ -156,7 +156,7 @@ private:
                     else {
                         // same here, except the bounds are flipped
                         l = std::make_pair(l02.first, 0);
-                        dl = std::make_pair((l01.first - l02.first) / T(x1 - x2), l01.second / T(x1 - x2));
+                        dl = std::make_pair((l01.first - l02.first) / (x1 - x2), l01.second / (x1 - x2));
                         l.first  += (xmin - x2) * dl.first;
                         l.second += (xmin - x2) * dl.second;
                     }
@@ -164,16 +164,16 @@ private:
 
                 for (int x = xmin; x < xmax; x++) {
                     if constexpr(require_interp) {
-                        const std::array<T, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
+                        const std::array<float, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
                         acleris.screen(x, int(y)) = MakeRGBA8(Interp(
-                                x / T(acleris.width), y / T(acleris.height),
+                                x / float(acleris.width), y / float(acleris.height),
                                 std::make_pair(l_[idx[0]], l_[idx[1]])
                         ));
                         l.first  += dl.first;
                         l.second += dl.second;
                     }
                     else {
-                        acleris.screen(x, int(y)) = Interp(x / T(acleris.width), y / T(acleris.height), {}).ToRGBA8();
+                        acleris.screen(x, int(y)) = Interp(x / float(acleris.width), y / float(acleris.height), {}).ToRGBA8();
                     }
                 }
                 x1 += dx1;
@@ -191,26 +191,26 @@ private:
             const int ymax_ = std::min<int>(acleris.height, std::max(_v1.template get<1>(), _v2.template get<1>()));
             x1 = _v1.template get<0>();  // just to be sure (should already be approx. the right value)
             const auto diff21 = _v2 - _v1;
-            dx1 = T(diff21.template get<0>()) / T(diff21.template get<1>());
+            dx1 = diff21.template get<0>() / diff21.template get<1>();
 
-            std::pair<T, T> l12 = std::make_pair(1, 0);
-            const T dl12 = 1 / T(diff21.template get<1>());
+            std::pair<float, float> l12 = std::make_pair(1, 0);
+            const float dl12 = 1 / diff21.template get<1>();
 
             while (y < ymax_) {
                 const int xmax = std::min<int>(acleris.width, std::max(x1, x2) + 1);
                 const int xmin = std::max<int>(0, std::min(x1, x2));
-                std::pair<T, T> l, dl;
+                std::pair<float, float> l, dl;
 
                 if constexpr(require_interp) {
                     if (x1 < x2) {
                         l = std::make_pair(0, l12.first);
-                        dl = std::make_pair(l02.first / T(x2 - x1), -l12.first / T(x2 - x1));
+                        dl = std::make_pair(l02.first / (x2 - x1), -l12.first / (x2 - x1));
                         l.first  += (xmin - x1) * dl.first;
                         l.second += (xmin - x1) * dl.second;
                     }
                     else {
                         l = std::make_pair(l02.first, 0);
-                        dl = std::make_pair(-l02.first / T(x1 - x2), l12.first / T(x1 - x2));
+                        dl = std::make_pair(-l02.first / (x1 - x2), l12.first / (x1 - x2));
                         l.first  += (xmin - x2) * dl.first;
                         l.second += (xmin - x2) * dl.second;
                     }
@@ -218,16 +218,16 @@ private:
 
                 for (int x = xmin; x < xmax; x++) {
                     if constexpr(require_interp) {
-                        const std::array<T, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
+                        const std::array<float, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
                         acleris.screen(x, int(y)) = MakeRGBA8(Interp(
-                                x / T(acleris.width), y / T(acleris.height),
+                                x / float(acleris.width), y / float(acleris.height),
                                 std::make_pair(l_[idx[0]], l_[idx[1]])
                         ));
                         l.first  += dl.first;
                         l.second += dl.second;
                     }
                     else {
-                        acleris.screen(x, int(y)) = Interp(x / T(acleris.width), y / T(acleris.height), {}).ToRGBA8();
+                        acleris.screen(x, int(y)) = Interp(x / float(acleris.width), y / float(acleris.height), {}).ToRGBA8();
                     }
                 }
                 x1 += dx1;

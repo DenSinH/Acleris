@@ -18,7 +18,7 @@ struct Line {
     Line(const V0& v0, const V1& v1) : v0(v0), v1(v1) { }
 
 private:
-    template<bool require_interp = true, typename F = Color (*)(), typename T = std::common_type_t<typename V0::type, typename V1::type>>
+    template<bool require_interp = true, typename F = Color (*)()>
     struct FragmentImpl {
         static_assert(std::is_same_v<util::func_return_t<F>, Color>);
 
@@ -26,12 +26,12 @@ private:
         const V1& v1;
         const F func;
     private:
-        auto Interp(T x, T y, const T& l0) {
+        auto Interp(float x, float y, const float l0) {
             static_assert(V0::dim == 2);
             static_assert(V1::dim == 2);
 
             if constexpr(require_interp) {
-                const T l1 = 1 - l0;
+                const float l1 = 1 - l0;
 
                 const auto op = [&](const auto& x, const auto& y) {
                     return l0 * x + l1 * y;
@@ -58,10 +58,10 @@ private:
         void Draw(Acleris& acleris) {
             // for y-major lines, the algorithm is precisely the same, except x and y are swapped
 
-            const vmath::Vector<T, 2> screen_dim = {acleris.width, acleris.height};
+            const vmath::Vector<float, 2> screen_dim = {acleris.width, acleris.height};
             auto _v0 = v0.x * screen_dim;
             auto _v1 = v1.x * screen_dim;
-            T l0 = 0;
+            float l0 = 0;
 
             if constexpr(!xmajor) {
                 // todo: do this better
@@ -76,14 +76,14 @@ private:
             }
 
             // initial coordinates
-            T x = _v0.template get<0>(), y = _v0.template get<1>();
+            float x = _v0.template get<0>(), y = _v0.template get<1>();
             auto diff = _v1 - _v0;
-            T dy = T(diff.template get<1>()) / T(diff.template get<0>());
+            float dy = diff.template get<1>() / diff.template get<0>();
 
             const auto xbound = (xmajor ? acleris.width : acleris.height);
             const auto square = diff * diff;
-            const T len = square.template get<0>() + square.template get<1>();
-            const T dl = (l0 ? -1 : 1) * std::sqrt((1 + dy * dy) / len);
+            const float len = square.template get<0>() + square.template get<1>();
+            const float dl = (l0 ? -1 : 1) * std::sqrt((1 + dy * dy) / len);
             if (x < 0) {
                 // clip to screen boundary
                 y += -x * dy;
@@ -120,7 +120,7 @@ private:
             // need to flip coordinates for x/y major
             if constexpr(xmajor) {
                 for (int x_ = int(x); x_ < _v1.template get<0>() && acleris.InBounds(x_, int(y)); x_++) {
-                    acleris.screen(int(x_), int(y)) = MakeRGBA8(Interp(x_ / T(acleris.width), y / T(acleris.height), l0));
+                    acleris.screen(int(x_), int(y)) = MakeRGBA8(Interp(x_ / float(acleris.width), y / float(acleris.height), l0));
                     y += dy;
                     if constexpr(require_interp) {
                         l0 += dl;
@@ -129,7 +129,7 @@ private:
             }
             else {
                 for (int x_ = int(x); x_ < _v1.template get<0>() && acleris.InBounds(int(y), x_); x_++) {
-                    acleris.screen(int(y), int(x_)) = MakeRGBA8(Interp(y / T(acleris.width), x_ / T(acleris.height), l0));
+                    acleris.screen(int(y), int(x_)) = MakeRGBA8(Interp(y / float(acleris.width), x_ / float(acleris.height), l0));
                     y += dy;
                     if constexpr(require_interp) {
                         l0 += dl;
@@ -168,20 +168,20 @@ public:
     }
 };
 
-template<typename V0, typename V1, typename T, size_t n>
+template<typename V0, typename V1, size_t n>
 requires (V0::dim == n) && (V1::dim == n)
-Line<V0, V1> operator+(const Line<V0, V1>& l, const vmath::Vector<T, n>& v) {
+Line<V0, V1> operator+(const Line<V0, V1>& l, const vmath::Vector<float, n>& v) {
     return Line<V0, V1>{l.v0 + v, l.v1 + v};
 }
 
-template<typename V0, typename V1, typename T, size_t n>
+template<typename V0, typename V1, size_t n>
 requires (V0::dim == n) && (V1::dim == n)
-Line<V0, V1> operator+(const vmath::Vector<T, n>& v, const Line<V0, V1>& l) {
+Line<V0, V1> operator+(const vmath::Vector<float, n>& v, const Line<V0, V1>& l) {
     return l + v;
 }
 
-template<typename V0, typename V1, typename T, size_t n>
+template<typename V0, typename V1, size_t n>
 requires (V0::dim == n) && (V1::dim == n)
-Line<V0, V1> operator-(const Line<V0, V1>& l, const vmath::Vector<T, n>& v) {
+Line<V0, V1> operator-(const Line<V0, V1>& l, const vmath::Vector<float, n>& v) {
     return Line<V0, V1>{l.v0 - v, l.v1 - v};
 }

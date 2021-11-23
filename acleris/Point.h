@@ -21,7 +21,7 @@ private:
         void Draw(Acleris& acleris) {
             static_assert(V0::dim == 2);
 
-            const vmath::Vector<typename V0::type, 2> screen_dim = {acleris.width, acleris.height};
+            const vmath::Vector<float, 2> screen_dim = {acleris.width, acleris.height};
             const vmath::Vector<std::uint32_t, 2> screen_coords = (v0.x * screen_dim).template convert<std::uint32_t>();
 
             if (acleris.InBounds(screen_coords)) {
@@ -40,20 +40,20 @@ public:
     }
 };
 
-template<typename V0, typename T, size_t n>
+template<typename V0, size_t n>
 requires (V0::dim == n)
-Point<V0> operator+(const Point<V0>& p, const vmath::Vector<T, n>& v) {
+Point<V0> operator+(const Point<V0>& p, const vmath::Vector<float, n>& v) {
     return Point<V0>{p.v0 + v};
 }
 
-template<typename V0, typename T, size_t n>
+template<typename V0, size_t n>
 requires (V0::dim == n)
-Point<V0> operator+(const vmath::Vector<T, n>& v, const Point<V0>& p) {
+Point<V0> operator+(const vmath::Vector<float, n>& v, const Point<V0>& p) {
     return p + v;
 }
 
-template<typename V0, typename T, size_t n>
+template<typename V0, size_t n>
 requires (V0::dim == n)
-Point<V0> operator-(const Point<V0>& p, const vmath::Vector<T, n>& v) {
+Point<V0> operator-(const Point<V0>& p, const vmath::Vector<float, n>& v) {
     return Point<V0>{p.v0 - v};
 }
