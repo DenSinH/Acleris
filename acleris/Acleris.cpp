@@ -2,12 +2,8 @@
 
 
 Acleris::Acleris(int width, int height) :
-        width(width), height(height), screen{width, height} {
+        width(width), height(height), screen{width, height}, zbuffer{width, height} {
     Clear();
-}
-
-void Acleris::Clear() {
-    std::fill(screen.begin(), screen.end(), 0);
 }
 
 void* Acleris::SDLMakeWindow() {

@@ -9,6 +9,7 @@
 
 
 template<typename V0, typename V1, typename V2>
+requires (V0::dim == V1::dim) && (V0::dim == V2::dim)
 struct Triangle {
     const V0 v0;
     const V1 v1;
@@ -28,9 +29,7 @@ private:
 
     private:
         auto Interp(float x, float y, const std::pair<float, float>& l) {
-            static_assert(V0::dim == 2);
-            static_assert(V1::dim == 2);
-            static_assert(V2::dim == 2);
+            static constexpr size_t dim = V0::dim;
 
             if constexpr(require_interp) {
 
@@ -64,14 +63,12 @@ private:
         }
     public:
         void Draw(Acleris& acleris) {
-            static_assert(V0::dim == 2);
-            static_assert(V1::dim == 2);
-            static_assert(V2::dim == 2);
+            static constexpr size_t dim = V0::dim;
 
-            const vmath::Vector<float, 2> screen_dim = {acleris.width, acleris.height};
-            auto _v0 = v0.x * screen_dim;
-            auto _v1 = v1.x * screen_dim;
-            auto _v2 = v2.x * screen_dim;
+            auto screen_dim = v4{acleris.width, acleris.height, 1, 1};
+            auto _v0 = (v4{1, 1, 0, 0} + v0.Extend4()) * screen_dim * v4{0.5, 0.5, 1, 1};
+            auto _v1 = (v4{1, 1, 0, 0} + v1.Extend4()) * screen_dim * v4{0.5, 0.5, 1, 1};
+            auto _v2 = (v4{1, 1, 0, 0} + v2.Extend4()) * screen_dim * v4{0.5, 0.5, 1, 1};
 
             std::array<int, 3> _idx{0, 1, 2};
 

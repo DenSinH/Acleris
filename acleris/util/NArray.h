@@ -40,7 +40,7 @@ struct NVect {
     template<typename... Args>
     requires (sizeof...(Args) == n)
     NVect(Args... args) :
-            base{},
+            base((size_t)(args * ...)),
             stride{transpose ? stride_t{1, (size_t)args...} : stride_t{(size_t)args..., 1}} {
         for (int i = 0; i < n; i++) {
             if constexpr(transpose) {
@@ -50,8 +50,6 @@ struct NVect {
                 stride[n + 1 - i] *= stride[n - i];
             }
         }
-
-        base.resize(stride[transpose ? n : 0]);
     }
 
     template<typename... Args>

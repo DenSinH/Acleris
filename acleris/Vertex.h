@@ -5,6 +5,7 @@
 #include <array>
 #include <tuple>
 
+using v4 = vmath::Vector<float, 4>;
 
 template<size_t n, typename... Args>
 struct Vertex {
@@ -17,6 +18,14 @@ struct Vertex {
     Vertex(vmath::Vector<float, n> x, Args... args) :
             x{std::move(x)}, args{args...} {
 
+    }
+
+    v4 Extend4() const {
+        v4 result = x.template extend<4>();
+        if constexpr(n < 4) {
+            result = (result.reinterpret<std::uint32_t>() | vmath::Vector<std::uint32_t, 4>{0, 0, 0, 1}).reinterpret<float>();
+        }
+        return result;
     }
 };
 

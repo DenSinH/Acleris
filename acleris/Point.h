@@ -19,10 +19,12 @@ private:
         const Color color;
 
         void Draw(Acleris& acleris) {
-            static_assert(V0::dim == 2);
+            static constexpr size_t dim = V0::dim;
 
-            const vmath::Vector<float, 2> screen_dim = {acleris.width, acleris.height};
-            const vmath::Vector<std::uint32_t, 2> screen_coords = (v0.x * screen_dim).template convert<std::uint32_t>();
+            const vmath::Vector<float, dim> screen_dim = {acleris.width, acleris.height};
+            auto _v0 = (vmath::Vector<float, dim>{1} + v0.x) * screen_dim * 0.5;
+
+            const vmath::Vector<std::uint32_t, 2> screen_coords = (_v0 * screen_dim).template convert<std::uint32_t>();
 
             if (acleris.InBounds(screen_coords)) {
                 acleris.screen(screen_coords.template get<0>(), screen_coords.template get<1>()) = MakeRGBA8(color);
