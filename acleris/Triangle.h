@@ -131,40 +131,37 @@ private:
              * */
 
             // difference per line
-            const float dl01 = 1.0 / diff10.get<1>();
-            const float dl02 = 1.0 / diff20.get<1>();
+            const v2 dl01 = v2{-1, 1} * (1.0 / diff10.get<1>());
+            const v2 dl02 = v2{-1, 0} * (1.0 / diff20.get<1>());
 
             // starting line might not be v0.y
-            std::pair<float, float> l01 = std::make_pair(1 - dl01 * (y - _v0.get<1>()), dl01 * (y - _v0.get<1>()));
-            std::pair<float, float> l02 = std::make_pair(1 - dl02 * (y - _v0.get<1>()), 0);
+            v2 l01 = v2{1, 0} + dl01 * (y - _v0.get<1>());
+            v2 l02 = v2{1, 0} + dl02 * (y - _v0.get<1>());
 
             while (y < ymax) {
                 // x bounds
                 const int xmax = std::min<int>(acleris.width, std::max(x1, x2) + 1);
                 const int xmin = std::max<int>(0, std::min(x1, x2));
-                std::pair<float, float> l, dl;
+                v2 l, dl;
 
+                dl = (l02 - l01) * (1 / (x2 - x1));
                 if (x1 < x2) {
                     // find starting l and dl for every line
-                    l = std::make_pair(l01.first, l01.second);
-                    dl = std::make_pair((l02.first - l01.first) / (x2 - x1), -l01.second / (x2 - x1));
+                    l = l01;
 
                     // correct for the fact that the triangle might start off-screen
-                    l.first  += (xmin - x1) * dl.first;
-                    l.second += (xmin - x1) * dl.second;
+                    l  += (xmin - x1) * dl;
                 }
                 else {
                     // same here, except the bounds are flipped
-                    l = std::make_pair(l02.first, 0);
-                    dl = std::make_pair((l01.first - l02.first) / (x1 - x2), l01.second / (x1 - x2));
-                    l.first  += (xmin - x2) * dl.first;
-                    l.second += (xmin - x2) * dl.second;
+                    l = l02;
+                    l  += (xmin - x2) * dl;
                 }
 
                 for (int x = xmin; x < xmax; x++) {
                     std::uint32_t color;
 
-                    const std::array<float, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
+                    const std::array<float, 3> l_ = {l.get<0>(), l.get<1>(), 1 - l.get<0>() - l.get<1>()};
                     if constexpr(require_interp) {
                         color = MakeRGBA8(Interp(
                                 x / float(acleris.width), y / float(acleris.height),
@@ -176,16 +173,14 @@ private:
                     }
 
                     acleris.screen(x, int(y)) = color;
-                    l.first  += dl.first;
-                    l.second += dl.second;
+                    l  += dl;
                 }
                 x1 += dx1;
                 x2 += dx2;
                 y++;
 
-                l01.first  -= dl01;
-                l01.second += dl01;
-                l02.first  -= dl02;
+                l01 += dl01;
+                l02 += dl02;
             }
 
             // draw part from v1 down to v2 (along v0 -- v2 and v1 -- v2)
@@ -194,30 +189,27 @@ private:
             const auto diff21 = _v2 - _v1;
             dx1 = diff21.get<0>() / diff21.get<1>();
 
-            std::pair<float, float> l12 = std::make_pair(1, 0);
-            const float dl12 = 1 / diff21.get<1>();
+            v2 l12 = v2{0, 1};
+            const v2 dl12 = v2{0, -1} * (1 / diff21.get<1>());
 
             while (y < ymax_) {
                 const int xmax = std::min<int>(acleris.width, std::max(x1, x2) + 1);
                 const int xmin = std::max<int>(0, std::min(x1, x2));
-                std::pair<float, float> l, dl;
+                v2 l, dl;
 
+                dl = (l02 - l12) * (1 / (x2 - x1));
                 if (x1 < x2) {
-                    l = std::make_pair(0, l12.first);
-                    dl = std::make_pair(l02.first / (x2 - x1), -l12.first / (x2 - x1));
-                    l.first  += (xmin - x1) * dl.first;
-                    l.second += (xmin - x1) * dl.second;
+                    l = l12;
+                    l += (xmin - x1) * dl;
                 }
                 else {
-                    l = std::make_pair(l02.first, 0);
-                    dl = std::make_pair(-l02.first / (x1 - x2), l12.first / (x1 - x2));
-                    l.first  += (xmin - x2) * dl.first;
-                    l.second += (xmin - x2) * dl.second;
+                    l = l02;
+                    l += (xmin - x2) * dl;
                 }
 
                 for (int x = xmin; x < xmax; x++) {
                     std::uint32_t color;
-                    const std::array<float, 3> l_ = {l.first, l.second, 1 - l.first - l.second};
+                    const std::array<float, 3> l_ = {l.get<0>(), l.get<1>(), 1 - l.get<0>() - l.get<1>()};
                     if constexpr(require_interp) {
                         color = MakeRGBA8(Interp(
                                 x / float(acleris.width), y / float(acleris.height),
@@ -227,8 +219,7 @@ private:
                     else {
                         color = Interp(x / float(acleris.width), y / float(acleris.height), {}).ToRGBA8();
                     }
-                    l.first  += dl.first;
-                    l.second += dl.second;
+                    l  += dl;
 
                     acleris.screen(x, int(y)) = color;
                 }
@@ -237,8 +228,8 @@ private:
                 y++;
 
                 if constexpr(require_interp) {
-                    l12.first -= dl12;
-                    l02.first -= dl02;
+                    l12 += dl12;
+                    l02 += dl02;
                 }
             }
         }
