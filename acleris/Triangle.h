@@ -94,6 +94,7 @@ private:
             for (int i = 0; i < 3; i++) {
                 idx[_idx[i]] = i;
             }
+            v3 depth_inverse = {_v0.get<3>(), _v1.get<3>(), _v2.get<3>()};
 
             // first: go from top point to middle point
             float x1 = _v0.get<0>(), x2 = _v0.get<0>();  // x1 will end up at v1 and x2 at v2
@@ -161,7 +162,10 @@ private:
                 for (int x = xmin; x < xmax; x++) {
                     std::uint32_t color;
 
-                    const std::array<float, 3> l_ = {l.get<0>(), l.get<1>(), 1 - l.get<0>() - l.get<1>()};
+                    v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
+                    v3 perspective = (full_l * depth_inverse) * (1 / (full_l * depth_inverse).sum());
+
+                    const std::array<float, 4> l_ = perspective.data();
                     if constexpr(require_interp) {
                         color = MakeRGBA8(Interp(
                                 x / float(acleris.width), y / float(acleris.height),
@@ -209,7 +213,10 @@ private:
 
                 for (int x = xmin; x < xmax; x++) {
                     std::uint32_t color;
-                    const std::array<float, 3> l_ = {l.get<0>(), l.get<1>(), 1 - l.get<0>() - l.get<1>()};
+                    v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
+                    v3 perspective = (full_l * depth_inverse) * (1 / (full_l * depth_inverse).sum());
+
+                    const std::array<float, 4> l_ = perspective.data();
                     if constexpr(require_interp) {
                         color = MakeRGBA8(Interp(
                                 x / float(acleris.width), y / float(acleris.height),
