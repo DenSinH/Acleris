@@ -74,6 +74,10 @@ private:
             v4 _v1 = (v4{1, 1, 0, 0} + util::Project(vert1.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
             v4 _v2 = (v4{1, 1, 0, 0} + util::Project(vert2.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
 
+            _v0 = acleris.view * _v0;
+            _v1 = acleris.view * _v1;
+            _v2 = acleris.view * _v2;
+
             std::array<int, 3> _idx{0, 1, 2};
 
             // sort by y coordinate
@@ -94,7 +98,9 @@ private:
             for (int i = 0; i < 3; i++) {
                 idx[_idx[i]] = i;
             }
-            v3 depth_inverse = {_v0.get<3>(), _v1.get<3>(), _v2.get<3>()};
+
+            const v3 depth_inverse = {_v0.get<3>(), _v1.get<3>(), _v2.get<3>()};
+            const v3 depth         = {_v0.get<2>(), _v1.get<2>(), _v2.get<2>()};
 
             // first: go from top point to middle point
             float x1 = _v0.get<0>(), x2 = _v0.get<0>();  // x1 will end up at v1 and x2 at v2
@@ -160,23 +166,26 @@ private:
                 }
 
                 for (int x = xmin; x < xmax; x++) {
-                    std::uint32_t color;
-
                     v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
-                    v3 perspective = (full_l * depth_inverse) * (1 / (full_l * depth_inverse).sum());
+                    float _depth = full_l.dot(depth);
 
-                    const std::array<float, 4> l_ = perspective.data();
-                    if constexpr(require_interp) {
-                        color = MakeRGBA8(Interp(
-                                x / float(acleris.width), y / float(acleris.height),
-                                std::make_pair(l_[idx[0]], l_[idx[1]])
-                        ));
-                    }
-                    else {
-                        color = Interp(x / float(acleris.width), y / float(acleris.height), {}).ToRGBA8();
-                    }
+                    if (acleris.CmpExchangeZ(_depth, x, int(y))) {
+                        std::uint32_t color;
+                        v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
 
-                    acleris.screen(x, int(y)) = color;
+                        const std::array<float, 4> l_ = perspective.data();
+                        if constexpr(require_interp) {
+                            color = MakeRGBA8(Interp(
+                                    x / float(acleris.width), y / float(acleris.height),
+                                    std::make_pair(l_[idx[0]], l_[idx[1]])
+                            ));
+                        }
+                        else {
+                            color = Interp(x / float(acleris.width), y / float(acleris.height), {}).ToRGBA8();
+                        }
+
+                        acleris.screen(x, int(y)) = color;
+                    }
                     l  += dl;
                 }
                 x1 += dx1;
@@ -212,23 +221,26 @@ private:
                 }
 
                 for (int x = xmin; x < xmax; x++) {
-                    std::uint32_t color;
                     v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
-                    v3 perspective = (full_l * depth_inverse) * (1 / (full_l * depth_inverse).sum());
+                    float _depth = full_l.dot(depth);
 
-                    const std::array<float, 4> l_ = perspective.data();
-                    if constexpr(require_interp) {
-                        color = MakeRGBA8(Interp(
-                                x / float(acleris.width), y / float(acleris.height),
-                                std::make_pair(l_[idx[0]], l_[idx[1]])
-                        ));
-                    }
-                    else {
-                        color = Interp(x / float(acleris.width), y / float(acleris.height), {}).ToRGBA8();
+                    if (acleris.CmpExchangeZ(_depth, x, int(y))) {
+                        std::uint32_t color;
+                        v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
+
+                        const std::array<float, 4> l_ = perspective.data();
+                        if constexpr(require_interp) {
+                            color = MakeRGBA8(Interp(
+                                    x / float(acleris.width), y / float(acleris.height),
+                                    std::make_pair(l_[idx[0]], l_[idx[1]])
+                            ));
+                        }
+                        else {
+                            color = Interp(x / float(acleris.width), y / float(acleris.height), {}).ToRGBA8();
+                        }
+                        acleris.screen(x, int(y)) = color;
                     }
                     l  += dl;
-
-                    acleris.screen(x, int(y)) = color;
                 }
                 x1 += dx1;
                 x2 += dx2;

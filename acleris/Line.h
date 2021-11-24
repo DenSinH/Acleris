@@ -61,6 +61,9 @@ private:
             auto screen_dim = v4{acleris.width, acleris.height, 1, 1};
             v4 _v0 = (v4{1, 1, 0, 0} + util::Project(v0.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
             v4 _v1 = (v4{1, 1, 0, 0} + util::Project(v1.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
+            // todo: perspective correct interpolation
+            _v0 = acleris.view * _v0;
+            _v1 = acleris.view * _v1;
 
             float l0 = 0;
 

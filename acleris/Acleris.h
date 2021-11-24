@@ -27,8 +27,8 @@ public:
     const std::uint32_t width, height;
     util::NVect<std::uint32_t, 2> screen;
     util::NVect<std::atomic<float>, 2> zbuffer;
+    vmath::Matrix<float, 4, 4> view;
 
-public:
     Acleris(int width, int height);
 
     template<std::uint32_t flags = Clear::Screen | Clear::Depth>
@@ -60,7 +60,7 @@ public:
         return (x >= 0) && (x < width) && (y >= 0) && (y < height);
     }
 
-    template<class Comp>
+    template<class Comp = std::greater<float>>
     bool CmpExchangeZ(float z, int x, int y) {
         Comp comp;
         float current_z;
@@ -73,6 +73,8 @@ public:
         } while(!dest.compare_exchange_weak(current_z, z));
         return true;
     }
+
+    void LookAt(const v3& eye, const v3& center, const v3& up);
 
     void* SDLMakeWindow();
     static void* SDLMakeRenderer(void* window);

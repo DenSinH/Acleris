@@ -2,8 +2,27 @@
 
 
 Acleris::Acleris(int width, int height) :
-        width(width), height(height), screen{width, height}, zbuffer{width, height} {
+        width(width), height(height), screen{width, height}, zbuffer{width, height},
+        view{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}} {
     Clear();
+}
+
+void Acleris::LookAt(const v3& eye, const v3& center, const v3& up) {
+    const v3 f = (center - eye).normalize();
+    const v3 u = up.normalize();
+    const auto _f = f.data();
+    const auto _u = u.data();
+    const v3 s = v3{
+        _f[1] * _u[2] - _f[2] * _u[1],
+        _f[2] * _u[0] - _f[0] * _u[2],
+        _f[0] * _u[1] - _f[1] * _u[0],
+    }.normalize();
+
+    v4 last_col = v4{
+        s.dot(eye), u.dot(eye), f.dot(eye), 1
+    };
+
+    view = {f.extend<4>(), u.extend<4>(), s.extend<4>(), last_col};
 }
 
 void* Acleris::SDLMakeWindow() {
