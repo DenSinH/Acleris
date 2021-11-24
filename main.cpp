@@ -7,21 +7,23 @@
 
 #undef main
 int main() {
-    Acleris rasterizer(500, 300);
+    Acleris rasterizer(400, 400);
 
     float t = 0.0;
 
     rasterizer.SDLRun([&](int x, int y) {
         rasterizer.Clear();
-        t += 0.01;
+        t += 2 * 3.1415 / 60;
 
-        auto v0 = MakeVertex<2>({0.5, 0}, MakeColor(0.0, 0.0, 1.0));
-        auto v1 = MakeVertex<2>({0.75, 0.75}, MakeColor(1.0, 0.0, 0.0), 2);
-        auto v2 = MakeVertex<2>({0.25, 0.25}, MakeColor(0.0, 1.0, 0.0), 2, 0);
+        auto v0 = MakeVertex<4>({-0.5, 0.5, 1, 2}, MakeColor(0.0, 0.0, 1.0));
+        auto v1 = MakeVertex<4>({0.5, 0.5, 1, 2}, MakeColor(1.0, 0.0, 0.0), 2);
+        auto v2 = MakeVertex<4>({0, -0.5, 1, 2}, MakeColor(0.0, 1.0, 0.0), 2, 0);
 
-        vmath::Matrix<float, 2, 2> mat{
-                {std::cos(t), std::sin(t)},
-                {-std::sin(t), std::cos(t)}
+        vmath::Matrix<float, 4, 4> mat{
+                {std::cos(t), std::sin(t), 0, 0},
+                {-std::sin(t), std::cos(t), 0, 0},
+                {0, 0, 1, 0},
+                {0, 0, 0, 1},
         };
 
         for (int i = 0; i < 2000; i++) {

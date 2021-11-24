@@ -3,6 +3,7 @@
 #include "util/Algorithm.h"
 #include "util/Func.h"
 #include "util/Tuple.h"
+#include "util/Vector.h"
 #include "Acleris.h"
 #include "Vertex.h"
 #include "Color.h"
@@ -58,37 +59,38 @@ private:
             static constexpr size_t dim = V0::dim;
 
             auto screen_dim = v4{acleris.width, acleris.height, 1, 1};
-            auto _v0 = (v4{1, 1, 0, 0} + v0.Extend4()) * screen_dim * v4{0.5, 0.5, 1, 1};
-            auto _v1 = (v4{1, 1, 0, 0} + v1.Extend4()) * screen_dim * v4{0.5, 0.5, 1, 1};
+            v4 _v0 = (v4{1, 1, 0, 0} + util::Project(v0.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
+            v4 _v1 = (v4{1, 1, 0, 0} + util::Project(v1.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
+
             float l0 = 0;
 
             if constexpr(!xmajor) {
                 // todo: do this better
-                _v0 = {_v0.template get<1>(), _v0.template get<0>(), _v0.template get<2>(), _v0.template get<3>()};
-                _v1 = {_v1.template get<1>(), _v1.template get<0>(), _v1.template get<2>(), _v1.template get<3>()};
+                _v0 = {_v0.get<1>(), _v0.get<0>(), _v0.get<2>(), _v0.get<3>()};
+                _v1 = {_v1.get<1>(), _v1.get<0>(), _v1.get<2>(), _v1.get<3>()};
             }
 
             // from left to right
-            if (_v1.template get<0>() < _v0.template get<0>()) {
+            if (_v1.get<0>() < _v0.get<0>()) {
                 std::swap(_v0, _v1);
                 l0 = 1;
             }
 
             // initial coordinates
-            float x = _v0.template get<0>(), y = _v0.template get<1>();
+            float x = _v0.get<0>(), y = _v0.get<1>();
             auto diff = _v1 - _v0;
-            float dy = diff.template get<1>() / diff.template get<0>();
+            float dy = diff.get<1>() / diff.get<0>();
 
             const auto xbound = (xmajor ? acleris.width : acleris.height);
             const auto square = diff * diff;
-            const float len = square.template get<0>() + square.template get<1>();
+            const float len = square.get<0>() + square.get<1>();
             const float dl = (l0 ? -1 : 1) * std::sqrt((1 + dy * dy) / len);
             if (x < 0) {
                 // clip to screen boundary
                 y += -x * dy;
                 l0 += -x * dy * dl;
                 x = 0;
-                if (_v1.template get<0>() < 0) [[unlikely]] return;  // entire line is off screen
+                if (_v1.get<0>() < 0) [[unlikely]] return;  // entire line is off screen
             }
             else if (x > xbound) {
                 return;
@@ -102,7 +104,7 @@ private:
                 l0 += (-y / dy) * dl;
 
                 // line ended before reaching screen
-                if (x > _v1.template get<0>()) [[unlikely]] return;
+                if (x > _v1.get<0>()) [[unlikely]] return;
                 y = 0;
             }
             else if (y > ybound) {
@@ -112,13 +114,13 @@ private:
                 l0 += ((y - ybound) / dy) * dl;
 
                 // line ended before reaching screen
-                if (x > _v1.template get<0>()) [[unlikely]] return;
+                if (x > _v1.get<0>()) [[unlikely]] return;
                 y = ybound;
             }
 
             // need to flip coordinates for x/y major
             if constexpr(xmajor) {
-                for (int x_ = int(x); x_ < _v1.template get<0>() && acleris.InBounds(x_, int(y)); x_++) {
+                for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(x_, int(y)); x_++) {
                     acleris.screen(int(x_), int(y)) = MakeRGBA8(Interp(x_ / float(acleris.width), y / float(acleris.height), l0));
                     y += dy;
                     if constexpr(require_interp) {
@@ -127,7 +129,7 @@ private:
                 }
             }
             else {
-                for (int x_ = int(x); x_ < _v1.template get<0>() && acleris.InBounds(int(y), x_); x_++) {
+                for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(int(y), x_); x_++) {
                     acleris.screen(int(y), int(x_)) = MakeRGBA8(Interp(y / float(acleris.width), x_ / float(acleris.height), l0));
                     y += dy;
                     if constexpr(require_interp) {

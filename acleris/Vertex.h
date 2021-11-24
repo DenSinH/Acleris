@@ -1,11 +1,11 @@
 #pragma once
 
 #include "VMath/Vector.h"
+#include "util/Vector.h"
 
 #include <array>
 #include <tuple>
 
-using v4 = vmath::Vector<float, 4>;
 
 template<size_t n, typename... Args>
 struct Vertex {
@@ -23,7 +23,7 @@ struct Vertex {
     v4 Extend4() const {
         v4 result = x.template extend<4>();
         if constexpr(n < 4) {
-            result = (result.reinterpret<std::uint32_t>() | vmath::Vector<std::uint32_t, 4>{0, 0, 0, 1}).reinterpret<float>();
+            result = (result.reinterpret<std::uint32_t>() | vmath::Vector<float, 4>{0, 0, 0, 1}.reinterpret<std::uint32_t>()).reinterpret<float>();
         }
         return result;
     }

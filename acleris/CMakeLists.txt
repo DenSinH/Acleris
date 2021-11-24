@@ -12,7 +12,7 @@ add_library(Acleris STATIC
         Shapes.h
         Triangle.h
         Vertex.h
-)
+        util/Vector.h)
 
 if (!${SDL2_FOUND})
     message(FATAL "Could not find SDL2")

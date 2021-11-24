@@ -2,6 +2,7 @@
 
 #include "util/Func.h"
 #include "util/Tuple.h"
+#include "util/Vector.h"
 #include "Acleris.h"
 #include "Vertex.h"
 #include "Color.h"
@@ -21,13 +22,13 @@ private:
         void Draw(Acleris& acleris) {
             static constexpr size_t dim = V0::dim;
 
-            const vmath::Vector<float, dim> screen_dim = {acleris.width, acleris.height};
-            auto _v0 = (vmath::Vector<float, dim>{1} + v0.x) * screen_dim * 0.5;
+            auto screen_dim = v4{acleris.width, acleris.height, 1, 1};
+            v4 _v0 = (v4{1, 1, 0, 0} + util::Project(v0.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
 
-            const vmath::Vector<std::uint32_t, 2> screen_coords = (_v0 * screen_dim).template convert<std::uint32_t>();
+            const vmath::Vector<std::uint32_t, 4> screen_coords = (_v0 * screen_dim).convert<std::uint32_t>();
 
             if (acleris.InBounds(screen_coords)) {
-                acleris.screen(screen_coords.template get<0>(), screen_coords.template get<1>()) = MakeRGBA8(color);
+                acleris.screen(screen_coords.get<0>(), screen_coords.get<1>()) = MakeRGBA8(color);
             }
         }
     };

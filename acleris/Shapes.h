@@ -25,5 +25,5 @@ Line<V0, V1> operator*(const vmath::Matrix<float, n, n>& mat, const Line<V0, V1>
 
 template<size_t n, typename V0, typename V1, typename V2>
 Triangle<V0, V1, V2> operator*(const vmath::Matrix<float, n, n>& mat, const Triangle<V0, V1, V2>& t) {
-    return Triangle<V0, V1, V2>(mat * t.v0, mat * t.v1, mat * t.v2);
+    return Triangle<V0, V1, V2>(mat * t.vert0, mat * t.vert1, mat * t.vert2);
 }
