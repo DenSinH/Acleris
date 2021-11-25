@@ -44,7 +44,7 @@ void Acleris::Projection(float r, float t, float n, float f) {
     };
 }
 
-void* Acleris::SDLMakeWindow() {
+void* Acleris::SDLMakeWindow() const {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
         throw util::FormatExcept("Error: %s", SDL_GetError());
     }
@@ -55,7 +55,7 @@ void* Acleris::SDLMakeWindow() {
     return window;
 }
 
-void* Acleris::SDLMakeRenderer(void* window) {
+void* Acleris::SDLMakeRenderer(void* window)  {
     return SDL_CreateRenderer(
             (SDL_Window*)window, -1, SDL_RENDERER_ACCELERATED
     );
@@ -67,34 +67,36 @@ void* Acleris::SDLMakeTexture(void* renderer) const {
     );
 }
 
-void Acleris::SDLRun(std::function<void(int, int)> update) {
-    auto window = (SDL_Window*)SDLMakeWindow();
-    auto renderer = (SDL_Renderer*)SDLMakeRenderer(window);
-    auto texture = (SDL_Texture*)SDLMakeTexture(renderer);
+void Acleris::SDLInit() {
+    frontend.SDL.window = SDLMakeWindow();
+    frontend.SDL.renderer = SDLMakeRenderer((SDL_Window*)frontend.SDL.window);
+    frontend.SDL.texture = SDLMakeTexture((SDL_Renderer*)frontend.SDL.renderer);
 
     SDL_GL_SetSwapInterval(0);
+}
 
-    while (true) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_QUIT: {
-                    SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER);
-                    SDL_DestroyWindow(window);
-                    SDL_Quit();
-                    return;
-                }
+void Acleris::SDLPollEvents() {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+            case SDL_QUIT: {
+                SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER);
+                SDL_DestroyWindow((SDL_Window*)frontend.SDL.window);
+                SDL_Quit();
+                frontend.shutdown = true;
+                return;
             }
         }
-
-        int x, y;
-        SDL_GetMouseState(&x, &y);
-
-        update(x, y);
-
-        SDL_RenderClear(renderer);
-        SDL_UpdateTexture(texture, nullptr, (const void *)screen.data(), 4 * width);
-        SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-        SDL_RenderPresent(renderer);
     }
+}
+
+void Acleris::SDLPresent() {
+    SDL_RenderClear((SDL_Renderer*)frontend.SDL.renderer);
+    SDL_UpdateTexture((SDL_Texture*)frontend.SDL.texture, nullptr, (const void *)screen.data(), 4 * width);
+    SDL_RenderCopy((SDL_Renderer*)frontend.SDL.renderer, (SDL_Texture*)frontend.SDL.texture, nullptr, nullptr);
+    SDL_RenderPresent((SDL_Renderer*)frontend.SDL.renderer);
+}
+
+void Acleris::SDLUpdateMouseState() {
+    SDL_GetMouseState(&mouse.x, &mouse.y);
 }

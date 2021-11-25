@@ -2,6 +2,7 @@
 
 #include "util/Format.h"
 #include "util/NArray.h"
+#include "util/Vector.h"
 #include "Vertex.h"
 #include "VMath/Matrix.h"
 
@@ -13,6 +14,46 @@
 #include <atomic>
 
 
+namespace detail {
+
+/*
+ * For getting function argument types.
+ * */
+
+template<typename... Args>
+struct pack {
+
+};
+
+template<typename Callable> struct func;
+
+template<typename R, typename... Args>
+struct func<R(Args...)> {
+    using args_t = pack<Args...>;
+};
+
+template<typename R, typename... Args>
+struct func<R (*)(Args...)> {
+    using args_t = pack<Args...>;
+};
+
+template<typename R, typename C, typename... Args>
+struct func<R (C::*)(Args...)> {
+    using args_t = pack<Args...>;
+};
+
+template<typename R, typename C, typename... Args>
+struct func<R (C::*)(Args...) const> {
+    using args_t = pack<Args...>;
+};
+
+template<typename Callable>
+struct func {
+    using args_t = typename func<decltype(&Callable::operator())>::args_t;
+};
+
+}
+
 struct Clear {
     enum : std::uint32_t {
         Screen = 1,
@@ -21,14 +62,11 @@ struct Clear {
 };
 
 struct Acleris {
-public:
-    using coord_t = float;
-
     const std::uint32_t width, height;
     util::NVect<std::uint32_t, 2> screen;
     util::NVect<std::atomic<float>, 2> zbuffer;
-    vmath::Matrix<float, 4, 4> view;
-    vmath::Matrix<float, 4, 4> projection;
+    m4x4 view;
+    m4x4 projection;
 
     Acleris(int width, int height);
 
@@ -42,7 +80,8 @@ public:
         }
     }
 
-    void SDLRun(std::function<void(int, int)> update);
+    template<class F>
+    void SDLRun(const F& update);
 
     bool InBounds(const vmath::Vector<std::uint32_t, 2>& v0) const {
         using uiv32 = vmath::Vector<std::uint32_t, 2>;
@@ -98,7 +137,66 @@ public:
         return result;
     }
 
-    void* SDLMakeWindow();
+    struct Mouse {
+        int x, y;
+    } mouse;
+
+private:
+    struct {
+        struct {
+            void* window;
+            void* renderer;
+            void* texture;
+        } SDL;
+
+        bool shutdown = false;
+    } frontend;
+
+    template<typename T>
+    T GetArg() {
+        if constexpr(std::is_same_v<T, Acleris::Mouse>) {
+            return mouse;
+        }
+        else {
+            []<bool b = false>{ static_assert(b, "Bad argument for run function"); }();
+        }
+    }
+
+    template<typename... Args>
+    std::tuple<Args...> GetArgs(detail::pack<Args...>) {
+        return std::tuple<Args...>{GetArg<Args>()...};
+    }
+
+    template<typename T, typename... Args>
+    static constexpr bool Need(detail::pack<Args...>) {
+        return (std::is_same_v<T, Args> || ...);
+    }
+
+    void* SDLMakeWindow() const;
     static void* SDLMakeRenderer(void* window);
     void* SDLMakeTexture(void* renderer) const;
+    void SDLInit();
+    void SDLPollEvents();
+    void SDLUpdateMouseState();
+    void SDLPresent();
 };
+
+
+template<class F>
+void Acleris::SDLRun(const F& update) {
+    SDLInit();
+
+    while (!frontend.shutdown) {
+        SDLPollEvents();
+
+        auto pack = typename detail::func<F>::args_t{};
+
+        if constexpr(Need<Acleris::Mouse>(pack)) {
+            SDLUpdateMouseState();
+        }
+
+        std::apply(update, GetArgs(pack));
+
+        SDLPresent();
+    }
+}
