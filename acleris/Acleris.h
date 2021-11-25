@@ -83,17 +83,12 @@ struct Acleris {
     template<class F>
     void SDLRun(const F& update);
 
-    bool InBounds(const vmath::Vector<std::uint32_t, 2>& v0) const {
+    template<size_t n>
+    bool InBounds(const vmath::Vector<std::uint32_t, n>& v0) const {
         using uiv32 = vmath::Vector<std::uint32_t, 2>;
-        return (((v0 < uiv32{}) | (v0 >= uiv32{width, height})) & (uiv32{-1, -1})).all_zero();
-    };
 
-    bool InBounds(const vmath::Vector<std::uint32_t, 3>& v0) const {
-        return InBounds(vmath::Matrix<std::uint32_t, 2, 3>{{1, 0, 0}, {0, 1, 0}} * v0);
-    };
-
-    bool InBounds(const vmath::Vector<std::uint32_t, 4>& v0) const {
-        return InBounds(vmath::Matrix<std::uint32_t, 2, 4>{{1, 0, 0, 0}, {0, 1, 0, 0}} * v0);
+        uiv32 _v0 = v0.template shorten<2>();
+        return (((_v0 < uiv32{}) | (_v0 >= uiv32{width, height})) & (uiv32{-1, -1})).all_zero();
     };
 
     bool InBounds(int x, int y) const {

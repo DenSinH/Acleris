@@ -72,6 +72,10 @@ void Acleris::SDLInit() {
     frontend.SDL.renderer = SDLMakeRenderer((SDL_Window*)frontend.SDL.window);
     frontend.SDL.texture = SDLMakeTexture((SDL_Renderer*)frontend.SDL.renderer);
 
+    SDL_ShowCursor(0);
+
+    SDLUpdateMouseState();
+
     SDL_GL_SetSwapInterval(0);
 }
 
