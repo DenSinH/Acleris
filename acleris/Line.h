@@ -14,18 +14,18 @@
 template<typename V0, typename V1>
 requires (V0::dim == V1::dim)
 struct Line {
-    const V0 v0;
-    const V1 v1;
+    const V0 vert0;
+    const V1 vert1;
 
-    Line(const V0& v0, const V1& v1) : v0(v0), v1(v1) { }
+    Line(const V0& vert0, const V1& vert1) : vert0(vert0), vert1(vert1) { }
 
 private:
     template<bool require_interp = true, typename F = Color (*)()>
     struct FragmentImpl {
         static_assert(std::is_same_v<util::func_return_t<F>, Color>);
 
-        const V0& v0;
-        const V1& v1;
+        const V0& vert0;
+        const V1& vert1;
         const F func;
     private:
         auto Interp(float x, float y, const float l0) {
@@ -42,13 +42,13 @@ private:
                 auto args = std::apply([&](const auto&... x){
                     return std::apply([&](const auto&... y){
                         return std::make_tuple(op(x, y)...);
-                    }, util::slice_tuple<min_size>(v1.args));
-                }, util::slice_tuple<min_size>(v0.args));
+                    }, util::slice_tuple<min_size>(vert1.args));
+                }, util::slice_tuple<min_size>(vert0.args));
 
                 return std::apply(func, args);
             }
             else {
-                auto args = util::slice_tuple<util::tuple_size(std::make_tuple<util::func_args_t<F>>())>(v0.args);
+                auto args = util::slice_tuple<util::tuple_size(std::make_tuple<util::func_args_t<F>>())>(vert0.args);
                 return std::apply(func, args);
             }
         }
@@ -58,12 +58,9 @@ private:
             // for y-major lines, the algorithm is precisely the same, except x and y are swapped
             static constexpr size_t dim = V0::dim;
 
-            auto screen_dim = v4{acleris.width, acleris.height, 1, 1};
-            v4 _v0 = (v4{1, 1, 0, 0} + util::Project(v0.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
-            v4 _v1 = (v4{1, 1, 0, 0} + util::Project(v1.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
+            v4 _v0 = acleris.DeviceCoordinates(vert0);
+            v4 _v1 = acleris.DeviceCoordinates(vert1);
             // todo: perspective correct interpolation
-            _v0 = acleris.view * _v0;
-            _v1 = acleris.view * _v1;
 
             float l0 = 0;
 
@@ -124,7 +121,7 @@ private:
             // need to flip coordinates for x/y major
             if constexpr(xmajor) {
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(x_, int(y)); x_++) {
-                    acleris.screen(int(x_), int(y)) = MakeRGBA8(Interp(x_ / float(acleris.width), y / float(acleris.height), l0));
+                    acleris.screen(int(x_), int(y)) = RGBA8(Interp(x_ / float(acleris.width), y / float(acleris.height), l0));
                     y += dy;
                     if constexpr(require_interp) {
                         l0 += dl;
@@ -133,7 +130,7 @@ private:
             }
             else {
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(int(y), x_); x_++) {
-                    acleris.screen(int(y), int(x_)) = MakeRGBA8(Interp(y / float(acleris.width), x_ / float(acleris.height), l0));
+                    acleris.screen(int(y), int(x_)) = RGBA8(Interp(y / float(acleris.width), x_ / float(acleris.height), l0));
                     y += dy;
                     if constexpr(require_interp) {
                         l0 += dl;
@@ -146,7 +143,7 @@ private:
         void Draw(Acleris& acleris) {
             // find out if the line is x-major or y-major
             // |y1 - y0| < |x1 - x0| <==> x-major (not steep)
-            const auto diff = (v1.x - v0.x).abs();
+            const auto diff = (vert1.x - vert0.x).abs();
             bool xmajor = diff.template get<0>() >= diff.template get<1>();
             if (xmajor) {
                 Draw<true>(acleris);
@@ -160,12 +157,12 @@ private:
 public:
     template<typename F>
     auto Fragment(F func) {
-        return FragmentImpl<true, F>{v0, v1, func};
+        return FragmentImpl<true, F>{vert0, vert1, func};
     }
 
     auto Color(Color color) {
         const auto func = [=]{ return color; };
-        return FragmentImpl<false, decltype(func)>{v0, v1, func};
+        return FragmentImpl<false, decltype(func)>{vert0, vert1, func};
     }
 };
 

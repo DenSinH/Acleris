@@ -22,7 +22,26 @@ void Acleris::LookAt(const v3& eye, const v3& center, const v3& up) {
         s.dot(eye), u.dot(eye), f.dot(eye), 1
     };
 
-    view = {f.extend<4>(), u.extend<4>(), s.extend<4>(), last_col};
+    view = {s.extend<4>(), u.extend<4>(), f.extend<4>(), last_col};
+}
+
+void Acleris::Projection(float l, float r, float b, float t, float n, float f) {
+    // see http://www.songho.ca/opengl/gl_projectionmatrix.html
+    projection = {
+            {(2 * n) / (r - l), 0,                 (r + l) / (r - l),   0},
+            {0,                 (2 * n) / (t - b), (t + b) / (t - b),   0},
+            {0,                 0,                 (-(f + n)) / (f - n), (-2 * f * n) / (f - n)},
+            {0,                 0,                 -1,                  0},
+    };
+}
+
+void Acleris::Projection(float r, float t, float n, float f) {
+    projection = {
+            {n / r, 0,     0,                    0},
+            {0,     n / t, 0,                    0},
+            {0,     0,     (-(f + n)) / (f - n), (-2 * f * n) / (f - n)},
+            {0,     0,     -1,                   0},
+    };
 }
 
 void* Acleris::SDLMakeWindow() {

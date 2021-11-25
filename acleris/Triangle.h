@@ -66,17 +66,10 @@ private:
         void Draw(Acleris& acleris) {
             static constexpr size_t dim = V0::dim;
 
-            auto screen_dim = v4{acleris.width, acleris.height, 1, 1};
-
-            // change to [-1, 1] and multiply with screen dimensions
-            // also project with w
-            v4 _v0 = (v4{1, 1, 0, 0} + util::Project(vert0.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
-            v4 _v1 = (v4{1, 1, 0, 0} + util::Project(vert1.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
-            v4 _v2 = (v4{1, 1, 0, 0} + util::Project(vert2.Extend4())) * screen_dim * v4{0.5, 0.5, 1, 1};
-
-            _v0 = acleris.view * _v0;
-            _v1 = acleris.view * _v1;
-            _v2 = acleris.view * _v2;
+            // convert to device coordinates
+            v4 _v0 = acleris.DeviceCoordinates(vert0);
+            v4 _v1 = acleris.DeviceCoordinates(vert1);
+            v4 _v2 = acleris.DeviceCoordinates(vert2);
 
             std::array<int, 3> _idx{0, 1, 2};
 
@@ -175,13 +168,13 @@ private:
 
                         const std::array<float, 4> l_ = perspective.data();
                         if constexpr(require_interp) {
-                            color = MakeRGBA8(Interp(
+                            color = RGBA8(Interp(
                                     x / float(acleris.width), y / float(acleris.height),
                                     std::make_pair(l_[idx[0]], l_[idx[1]])
                             ));
                         }
                         else {
-                            color = Interp(x / float(acleris.width), y / float(acleris.height), {}).ToRGBA8();
+                            color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
                         }
 
                         acleris.screen(x, int(y)) = color;
@@ -230,13 +223,13 @@ private:
 
                         const std::array<float, 4> l_ = perspective.data();
                         if constexpr(require_interp) {
-                            color = MakeRGBA8(Interp(
+                            color = RGBA8(Interp(
                                     x / float(acleris.width), y / float(acleris.height),
                                     std::make_pair(l_[idx[0]], l_[idx[1]])
                             ));
                         }
                         else {
-                            color = Interp(x / float(acleris.width), y / float(acleris.height), {}).ToRGBA8();
+                            color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
                         }
                         acleris.screen(x, int(y)) = color;
                     }

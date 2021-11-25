@@ -28,6 +28,7 @@ public:
     util::NVect<std::uint32_t, 2> screen;
     util::NVect<std::atomic<float>, 2> zbuffer;
     vmath::Matrix<float, 4, 4> view;
+    vmath::Matrix<float, 4, 4> projection;
 
     Acleris(int width, int height);
 
@@ -60,7 +61,7 @@ public:
         return (x >= 0) && (x < width) && (y >= 0) && (y < height);
     }
 
-    template<class Comp = std::greater<float>>
+    template<class Comp = std::less<float>>
     bool CmpExchangeZ(float z, int x, int y) {
         Comp comp;
         float current_z;
@@ -75,6 +76,27 @@ public:
     }
 
     void LookAt(const v3& eye, const v3& center, const v3& up);
+    void Projection(float left, float right, float bottom, float top, float near, float far);
+    void Projection(float right, float top, float near, float far);
+
+    template<size_t n, typename... Args>
+    v4 DeviceCoordinates(const Vertex<n, Args...>& vert) {
+        // extend vertex position with w = 1 (if length is not yet 4)
+        v4 result = vert.x.template extend<4>();
+        if constexpr(n < 4) {
+            // set w = 1
+            result = (result.reinterpret<std::uint32_t>() | vmath::Vector<float, 4>{0, 0, 0, 1}.reinterpret<std::uint32_t>()).reinterpret<float>();
+        }
+
+        // multiply with model, view and projection matrices
+        result = projection * (view * /* model * */ result);
+
+        // project onto screen
+        const v4 screen_dim = {width, height, 1, 1};
+        result = (v4{1, 1, 0, 0} + util::Project(result)) * screen_dim * v4{0.5, 0.5, 1, 1};
+
+        return result;
+    }
 
     void* SDLMakeWindow();
     static void* SDLMakeRenderer(void* window);

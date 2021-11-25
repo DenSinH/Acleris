@@ -19,14 +19,6 @@ struct Vertex {
             x{std::move(x)}, args{args...} {
 
     }
-
-    v4 Extend4() const {
-        v4 result = x.template extend<4>();
-        if constexpr(n < 4) {
-            result = (result.reinterpret<std::uint32_t>() | vmath::Vector<float, 4>{0, 0, 0, 1}.reinterpret<std::uint32_t>()).reinterpret<float>();
-        }
-        return result;
-    }
 };
 
 template<int n, typename... Args>
