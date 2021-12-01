@@ -48,21 +48,15 @@ private:
                 return std::apply(func, args);
             }
             else {
-                auto args = util::slice_tuple<util::tuple_size(std::make_tuple<util::func_args_t<F>>())>(vert0.args);
-                return std::apply(func, args);
+                // auto args = util::slice_tuple<util::tuple_size(std::make_tuple<util::func_args_t<F>>())>(vert0.args);
+                return func();
             }
         }
 
         template<bool xmajor>
-        void Draw(Acleris& acleris) {
+        void Draw(Acleris& acleris, v4 _v0, v4 _v1) {
             // for y-major lines, the algorithm is precisely the same, except x and y are swapped
             static constexpr size_t dim = V0::dim;
-
-            v4 _v0 = acleris.DeviceCoordinates(vert0);
-            if (_v0.get<3>() < 0) return;
-            v4 _v1 = acleris.DeviceCoordinates(vert1);
-            if (_v1.get<3>() < 0) return;
-            // todo: perspective correct interpolation
 
             float l0 = 0;
 
@@ -72,6 +66,17 @@ private:
                 _v1 = {_v1.get<1>(), _v1.get<0>(), _v1.get<2>(), _v1.get<3>()};
             }
 
+//            if (_v0.get<3>() < 0) {
+//                _v0 = _v0.mask_mul(v4{-1}, vmath::Mask(0, 1, 2), _v0);
+//            }
+//            if (_v1.get<3>() < 0) {
+//                _v1 = _v1.mask_mul(v4{-1}, vmath::Mask(0, 1, 2), _v1);
+//            }
+//
+//            std::printf("%f %f %f %f\n", _v0.get<0>(), _v0.get<1>(), _v0.get<2>(), _v0.get<3>());
+//            std::printf("%f %f %f %f\n", _v1.get<0>(), _v1.get<1>(), _v1.get<2>(), _v1.get<3>());
+//            std::printf("\n");
+
             // from left to right
             if (_v1.get<0>() < _v0.get<0>()) {
                 std::swap(_v0, _v1);
@@ -79,14 +84,14 @@ private:
             }
 
             // initial coordinates
-            float x = _v0.get<0>(), y = _v0.get<1>();
-            auto diff = _v1 - _v0;
+            float x = _v0.get<0>();
+            float y = _v0.get<1>();
+            const auto diff = _v1 - _v0;
             float dy = diff.get<1>() / diff.get<0>();
 
             const auto xbound = (xmajor ? acleris.width : acleris.height);
-            const auto square = diff * diff;
-            const float len = square.get<0>() + square.get<1>();
-            const float dl = (l0 ? -1 : 1) * std::sqrt((1 + dy * dy) / len);
+            const float dl = (l0 ? -1 : 1) * std::sqrt((1 + dy * dy) / diff.dot(diff));
+
             if (x < 0) {
                 // clip to screen boundary
                 y += -x * dy;
@@ -123,27 +128,39 @@ private:
             // need to flip coordinates for x/y major
             if constexpr(xmajor) {
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(x_, int(y)); x_++) {
-                    const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
+                    const float depth_inverse = l0 * _v0.get<3>() + (1 - l0) * _v1.get<3>();
 
-                    if (acleris.CmpExchangeZ(depth, x_, int(y))) {
-                        acleris.screen(int(x_), int(y)) = RGBA8(Interp(x_ / float(acleris.width), y / float(acleris.height), l0));
-                        y += dy;
-                        if constexpr(require_interp) {
-                            l0 += dl;
+                    if (depth_inverse >= 0) {
+                        const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
+
+                        if (acleris.CmpExchangeZ(depth, x_, int(y))) {
+                            acleris.screen(int(x_), int(y)) = RGBA8(
+                                    Interp(x_ / float(acleris.width), y / float(acleris.height), l0)
+                            );
                         }
+                    }
+                    y += dy;
+                    if constexpr(require_interp) {
+                        l0 += dl;
                     }
                 }
             }
             else {
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(int(y), x_); x_++) {
-                    const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
+                    const float depth_inverse = l0 * _v0.get<3>() + (1 - l0) * _v1.get<3>();
 
-                    if (acleris.CmpExchangeZ(depth, int(y), int(x_))) {
-                        acleris.screen(int(y), int(x_)) = RGBA8(Interp(y / float(acleris.width), x_ / float(acleris.height), l0));
-                        y += dy;
-                        if constexpr(require_interp) {
-                            l0 += dl;
+                    if (depth_inverse >= 0) {
+                        const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
+
+                        if (acleris.CmpExchangeZ(depth, int(y), int(x_))) {
+                            acleris.screen(int(y), int(x_)) = RGBA8(
+                                    Interp(y / float(acleris.width), x_ / float(acleris.height), l0)
+                            );
                         }
+                    }
+                    y += dy;
+                    if constexpr(require_interp) {
+                        l0 += dl;
                     }
                 }
             }
@@ -153,13 +170,16 @@ private:
         void Draw(Acleris& acleris) {
             // find out if the line is x-major or y-major
             // |y1 - y0| < |x1 - x0| <==> x-major (not steep)
-            const auto diff = (vert1.x - vert0.x).abs();
+            v4 _v0 = acleris.DeviceCoordinates(vert0);
+            v4 _v1 = acleris.DeviceCoordinates(vert1);
+
+            const auto diff = (_v1 - _v0).abs();
             bool xmajor = diff.template get<0>() >= diff.template get<1>();
             if (xmajor) {
-                Draw<true>(acleris);
+                Draw<true>(acleris, _v0, _v1);
             }
             else {
-                Draw<false>(acleris);
+                Draw<false>(acleris, _v0, _v1);
             }
         }
     };

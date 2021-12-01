@@ -17,7 +17,7 @@ static v4 Project(const v4& v) {
     // v.xyz /= v.w
     // v.w = 1 / v.w
     auto rv = v4{1 / v.get<3>()};
-    return v.mask_mul(rv, vmath::Mask(0, 1, 2), rv);
+    return v.mask_mul(rv.abs(), vmath::Mask(0, 1, 2), rv);
 }
 
 }

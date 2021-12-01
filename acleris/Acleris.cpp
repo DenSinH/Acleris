@@ -9,22 +9,33 @@ Acleris::Acleris(int width, int height) :
     Clear();
 }
 
+static v3 cross(const v3& v, const v3& w) {
+    const auto _v = v.data();
+    const auto _w = w.data();
+    return v3{
+            _v[1] * _w[2] - _v[2] * _w[1],
+            _v[2] * _w[0] - _v[0] * _w[2],
+            _v[0] * _w[1] - _v[1] * _w[0],
+    }.normalize();
+}
+
 void Acleris::LookAt(const v3& eye, const v3& center, const v3& up) {
     const v3 f = (center - eye).normalize();
-    const v3 u = up.normalize();
-    const auto _f = f.data();
-    const auto _u = u.data();
-    const v3 s = v3{
-        _f[1] * _u[2] - _f[2] * _u[1],
-        _f[2] * _u[0] - _f[0] * _u[2],
-        _f[0] * _u[1] - _f[1] * _u[0],
-    }.normalize();
+    const v3 s = cross(up, f).normalize();
+    const v3 u = cross(f, s);
 
     v4 last_col = v4{
-        s.dot(eye), u.dot(eye), f.dot(eye), 1
+        -s.dot(eye), -u.dot(eye), -f.dot(eye), 1
     };
 
-    view = {s.extend<4>(), u.extend<4>(), f.extend<4>(), last_col};
+    view = {
+            {s.get<0>(), s.get<1>(), s.get<2>(), -s.dot(eye)},
+            {u.get<0>(), u.get<1>(), u.get<2>(), -u.dot(eye)},
+            {f.get<0>(), f.get<1>(), f.get<2>(), -f.dot(eye)},
+            {0, 0, 0, 1},
+    };
+
+//    view = {s.extend<4>(), u.extend<4>(), f.extend<4>(), last_col};
 }
 
 void Acleris::Projection(float l, float r, float b, float t, float n, float f) {

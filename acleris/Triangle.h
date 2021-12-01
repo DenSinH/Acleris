@@ -68,11 +68,8 @@ private:
 
             // convert to device coordinates
             v4 _v0 = acleris.DeviceCoordinates(vert0);
-            if (_v0.get<3>() < 0) return;
             v4 _v1 = acleris.DeviceCoordinates(vert1);
-            if (_v1.get<3>() < 0) return;
             v4 _v2 = acleris.DeviceCoordinates(vert2);
-            if (_v2.get<3>() < 0) return;
 
             std::array<int, 3> _idx{0, 1, 2};
 
@@ -99,11 +96,12 @@ private:
             const v3 depth         = {_v0.get<2>(), _v1.get<2>(), _v2.get<2>()};
 
             // first: go from top point to middle point
-            float x1 = _v0.get<0>(), x2 = _v0.get<0>();  // x1 will end up at v1 and x2 at v2
-            const auto diff20 = _v2 - _v0;
+            float x1 = _v0.get<0>();  // ends up at v1
+            float x2 = _v0.get<0>();  // x2 ends at v2
             const auto diff10 = _v1 - _v0;
-            float dx2 = diff20.get<0>() / diff20.get<1>();
+            const auto diff20 = _v2 - _v0;
             float dx1 = diff10.get<0>() / diff10.get<1>();
+            const float dx2 = diff20.get<0>() / diff20.get<1>();
 
             float y = _v0.get<1>();
             if (y < 0) {
@@ -163,25 +161,27 @@ private:
 
                 for (int x = xmin; x < xmax; x++) {
                     v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
-                    float _depth = full_l.dot(depth);
+                    const v3 _depth_inverse = (full_l * depth_inverse);
+                    if (_depth_inverse.sum() >= 0) {
+                        float _depth = full_l.dot(depth);
 
-                    if (acleris.CmpExchangeZ(_depth, x, int(y))) {
-                        std::uint32_t color;
-                        v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
+                        if (acleris.CmpExchangeZ(_depth, x, int(y))) {
+                            std::uint32_t color;
+                            const v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
 
-                        const std::array<float, 4> l_ = perspective.data();
-                        if constexpr(require_interp) {
-                            color = RGBA8(Interp(
-                                    x / float(acleris.width), y / float(acleris.height),
-                                    std::make_pair(l_[idx[0]], l_[idx[1]])
-                            ));
-//                                color=RGBA8(RGB(-_depth / 5, -_depth / 5, -_depth / 5));
+                            const std::array<float, 4> l_ = perspective.data();
+                            if constexpr(require_interp) {
+                                color = RGBA8(Interp(
+                                        x / float(acleris.width), y / float(acleris.height),
+                                        std::make_pair(l_[idx[0]], l_[idx[1]])
+                                ));
+                            }
+                            else {
+                                color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
+                            }
+
+                            acleris.screen(x, int(y)) = color;
                         }
-                        else {
-                            color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
-                        }
-
-                        acleris.screen(x, int(y)) = color;
                     }
                     l  += dl;
                 }
@@ -198,9 +198,13 @@ private:
             x1 = _v1.get<0>();  // just to be sure (should already be approx. the right value)
             const auto diff21 = _v2 - _v1;
             dx1 = diff21.get<0>() / diff21.get<1>();
-
             v2 l12 = v2{0, 1};
             const v2 dl12 = v2{0, -1} * (1 / diff21.get<1>());
+
+            if (_v1.get<1>() < 0) {
+                x1 += dx1 * -_v1.get<1>();
+                l12 += dl12 * -_v1.get<1>();
+            }
 
             while (y < ymax_) {
                 const int xmax = std::min<int>(acleris.width, std::max(x1, x2) + 1);
@@ -219,23 +223,27 @@ private:
 
                 for (int x = xmin; x < xmax; x++) {
                     v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
-                    float _depth = full_l.dot(depth);
-                    if (acleris.CmpExchangeZ(_depth, x, int(y))) {
-                        std::uint32_t color;
-                        v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
+                    const v3 _depth_inverse = (full_l * depth_inverse);
 
-                        const std::array<float, 4> l_ = perspective.data();
-                        if constexpr(require_interp) {
-                            color = RGBA8(Interp(
-                                    x / float(acleris.width), y / float(acleris.height),
-                                    std::make_pair(l_[idx[0]], l_[idx[1]])
-                            ));
-//                                color=RGBA8(RGB(-_depth / 5, -_depth / 5, -_depth / 5));
+                    if (_depth_inverse.sum() >= 0) {
+                        float _depth = full_l.dot(depth);
+
+                        if (acleris.CmpExchangeZ(_depth, x, int(y))) {
+                            std::uint32_t color;
+                            v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
+
+                            const std::array<float, 4> l_ = perspective.data();
+                            if constexpr(require_interp) {
+                                color = RGBA8(Interp(
+                                        x / float(acleris.width), y / float(acleris.height),
+                                        std::make_pair(l_[idx[0]], l_[idx[1]])
+                                ));
+                            }
+                            else {
+                                color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
+                            }
+                            acleris.screen(x, int(y)) = color;
                         }
-                        else {
-                            color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
-                        }
-                        acleris.screen(x, int(y)) = color;
                     }
 
                     l  += dl;
