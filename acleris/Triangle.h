@@ -68,8 +68,11 @@ private:
 
             // convert to device coordinates
             v4 _v0 = acleris.DeviceCoordinates(vert0);
+            if (_v0.get<3>() < 0) return;
             v4 _v1 = acleris.DeviceCoordinates(vert1);
+            if (_v1.get<3>() < 0) return;
             v4 _v2 = acleris.DeviceCoordinates(vert2);
+            if (_v2.get<3>() < 0) return;
 
             std::array<int, 3> _idx{0, 1, 2};
 
@@ -172,6 +175,7 @@ private:
                                     x / float(acleris.width), y / float(acleris.height),
                                     std::make_pair(l_[idx[0]], l_[idx[1]])
                             ));
+//                                color=RGBA8(RGB(-_depth / 5, -_depth / 5, -_depth / 5));
                         }
                         else {
                             color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
@@ -190,7 +194,7 @@ private:
             }
 
             // draw part from v1 down to v2 (along v0 -- v2 and v1 -- v2)
-            const int ymax_ = std::min<int>(acleris.height, std::max(_v1.get<1>(), _v2.get<1>()));
+            const int ymax_ = std::min<int>(acleris.height, _v2.get<1>());
             x1 = _v1.get<0>();  // just to be sure (should already be approx. the right value)
             const auto diff21 = _v2 - _v1;
             dx1 = diff21.get<0>() / diff21.get<1>();
@@ -216,7 +220,6 @@ private:
                 for (int x = xmin; x < xmax; x++) {
                     v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
                     float _depth = full_l.dot(depth);
-
                     if (acleris.CmpExchangeZ(_depth, x, int(y))) {
                         std::uint32_t color;
                         v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
@@ -227,12 +230,14 @@ private:
                                     x / float(acleris.width), y / float(acleris.height),
                                     std::make_pair(l_[idx[0]], l_[idx[1]])
                             ));
+//                                color=RGBA8(RGB(-_depth / 5, -_depth / 5, -_depth / 5));
                         }
                         else {
                             color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
                         }
                         acleris.screen(x, int(y)) = color;
                     }
+
                     l  += dl;
                 }
                 x1 += dx1;

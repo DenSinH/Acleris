@@ -1,5 +1,7 @@
 #include "Acleris.h"
 
+#include <stdexcept>
+
 
 Acleris::Acleris(int width, int height) :
         width(width), height(height), screen{width, height}, zbuffer{width, height},
@@ -27,6 +29,8 @@ void Acleris::LookAt(const v3& eye, const v3& center, const v3& up) {
 
 void Acleris::Projection(float l, float r, float b, float t, float n, float f) {
     // see http://www.songho.ca/opengl/gl_projectionmatrix.html
+    near = n;
+    far = f;
     projection = {
             {(2 * n) / (r - l), 0,                 (r + l) / (r - l),   0},
             {0,                 (2 * n) / (t - b), (t + b) / (t - b),   0},
@@ -36,6 +40,8 @@ void Acleris::Projection(float l, float r, float b, float t, float n, float f) {
 }
 
 void Acleris::Projection(float r, float t, float n, float f) {
+    near = n;
+    far = f;
     projection = {
             {n / r, 0,     0,                    0},
             {0,     n / t, 0,                    0},
@@ -46,7 +52,7 @@ void Acleris::Projection(float r, float t, float n, float f) {
 
 void* Acleris::SDLMakeWindow() const {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
-        throw util::FormatExcept("Error: %s", SDL_GetError());
+        throw std::runtime_error("Failed to initialize window");
     }
 
     auto window_flags = (SDL_WindowFlags) (SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | // SDL_WINDOW_RESIZABLE |
@@ -73,10 +79,9 @@ void Acleris::SDLInit() {
     frontend.SDL.texture = SDLMakeTexture((SDL_Renderer*)frontend.SDL.renderer);
 
     SDL_ShowCursor(0);
+    SDL_SetRelativeMouseMode((SDL_bool)frontend.SDL.mouse_trapped);
 
-    SDLUpdateMouseState();
-
-    SDL_GL_SetSwapInterval(0);
+    SDL_GL_SetSwapInterval(1);
 }
 
 void Acleris::SDLPollEvents() {
@@ -90,6 +95,47 @@ void Acleris::SDLPollEvents() {
                 frontend.shutdown = true;
                 return;
             }
+            case SDL_KEYDOWN:
+            case SDL_KEYUP: {
+                bool pressed = event.key.type == SDL_KEYDOWN;
+                if ((0 <= event.key.keysym.sym) && (event.key.keysym.sym < 128)) {
+                    keyboard.ascii[event.key.keysym.sym] = pressed;
+                }
+                switch (event.key.keysym.sym) {
+                    case SDLK_SPACE:
+                        keyboard.space = pressed;
+                        break;
+                    case SDLK_UP:
+                        keyboard.up = pressed;
+                        break;
+                    case SDLK_DOWN:
+                        keyboard.down = pressed;
+                        break;
+                    case SDLK_LEFT:
+                        keyboard.left = pressed;
+                        break;
+                    case SDLK_RIGHT:
+                        keyboard.right = pressed;
+                        break;
+                    case SDLK_LSHIFT:
+                        keyboard.lshift = pressed;
+                        break;
+                    case SDLK_ESCAPE:
+                        frontend.SDL.mouse_trapped ^= pressed;
+                        SDL_SetRelativeMouseMode((SDL_bool)frontend.SDL.mouse_trapped);
+                        SDL_ShowCursor(!frontend.SDL.mouse_trapped);
+                        keyboard.esc = pressed;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            }
+            case SDL_MOUSEMOTION: {
+                mouse.x += event.motion.xrel;
+                mouse.y += event.motion.yrel;
+                break;
+            }
         }
     }
 }
@@ -99,8 +145,4 @@ void Acleris::SDLPresent() {
     SDL_UpdateTexture((SDL_Texture*)frontend.SDL.texture, nullptr, (const void *)screen.data(), 4 * width);
     SDL_RenderCopy((SDL_Renderer*)frontend.SDL.renderer, (SDL_Texture*)frontend.SDL.texture, nullptr, nullptr);
     SDL_RenderPresent((SDL_Renderer*)frontend.SDL.renderer);
-}
-
-void Acleris::SDLUpdateMouseState() {
-    SDL_GetMouseState(&mouse.x, &mouse.y);
 }

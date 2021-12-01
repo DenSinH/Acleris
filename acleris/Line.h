@@ -59,7 +59,9 @@ private:
             static constexpr size_t dim = V0::dim;
 
             v4 _v0 = acleris.DeviceCoordinates(vert0);
+            if (_v0.get<3>() < 0) return;
             v4 _v1 = acleris.DeviceCoordinates(vert1);
+            if (_v1.get<3>() < 0) return;
             // todo: perspective correct interpolation
 
             float l0 = 0;
@@ -121,19 +123,27 @@ private:
             // need to flip coordinates for x/y major
             if constexpr(xmajor) {
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(x_, int(y)); x_++) {
-                    acleris.screen(int(x_), int(y)) = RGBA8(Interp(x_ / float(acleris.width), y / float(acleris.height), l0));
-                    y += dy;
-                    if constexpr(require_interp) {
-                        l0 += dl;
+                    const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
+
+                    if (acleris.CmpExchangeZ(depth, x_, int(y))) {
+                        acleris.screen(int(x_), int(y)) = RGBA8(Interp(x_ / float(acleris.width), y / float(acleris.height), l0));
+                        y += dy;
+                        if constexpr(require_interp) {
+                            l0 += dl;
+                        }
                     }
                 }
             }
             else {
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(int(y), x_); x_++) {
-                    acleris.screen(int(y), int(x_)) = RGBA8(Interp(y / float(acleris.width), x_ / float(acleris.height), l0));
-                    y += dy;
-                    if constexpr(require_interp) {
-                        l0 += dl;
+                    const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
+
+                    if (acleris.CmpExchangeZ(depth, int(y), int(x_))) {
+                        acleris.screen(int(y), int(x_)) = RGBA8(Interp(y / float(acleris.width), x_ / float(acleris.height), l0));
+                        y += dy;
+                        if constexpr(require_interp) {
+                            l0 += dl;
+                        }
                     }
                 }
             }

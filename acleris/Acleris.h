@@ -1,6 +1,5 @@
 #pragma once
 
-#include "util/Format.h"
 #include "util/NArray.h"
 #include "util/Vector.h"
 #include "Vertex.h"
@@ -66,6 +65,7 @@ struct Acleris {
     util::NVect<std::uint32_t, 2> screen;
     util::NVect<std::atomic<float>, 2> zbuffer;
     m4x4 view;
+    float near, far;
     m4x4 projection;
 
     Acleris(int width, int height);
@@ -76,7 +76,7 @@ struct Acleris {
             std::fill(screen.begin(), screen.end(), 0);
         }
         if constexpr((flags & Clear::Depth) != 0) {
-            std::fill(zbuffer.begin(), zbuffer.end(), 0);
+            std::fill(zbuffer.begin(), zbuffer.end(), std::numeric_limits<float>::infinity());
         }
     }
 
@@ -132,9 +132,16 @@ struct Acleris {
         return result;
     }
 
+    struct Keyboard {
+        bool ascii[128] = {};
+        bool space, lshift;
+        bool up, down, left, right;
+        bool esc;
+    } keyboard = {};
+
     struct Mouse {
         int x, y;
-    } mouse;
+    } mouse = {};
 
 private:
     struct {
@@ -142,6 +149,7 @@ private:
             void* window;
             void* renderer;
             void* texture;
+            bool mouse_trapped = true;
         } SDL;
 
         bool shutdown = false;
@@ -151,6 +159,9 @@ private:
     T GetArg() {
         if constexpr(std::is_same_v<T, Acleris::Mouse>) {
             return mouse;
+        }
+        else if constexpr(std::is_same_v<T, Acleris::Keyboard>) {
+            return keyboard;
         }
         else {
             []<bool b = false>{ static_assert(b, "Bad argument for run function"); }();
@@ -172,7 +183,6 @@ private:
     void* SDLMakeTexture(void* renderer) const;
     void SDLInit();
     void SDLPollEvents();
-    void SDLUpdateMouseState();
     void SDLPresent();
 };
 
@@ -185,11 +195,6 @@ void Acleris::SDLRun(const F& update) {
         SDLPollEvents();
 
         auto pack = typename detail::func<F>::args_t{};
-
-        if constexpr(Need<Acleris::Mouse>(pack)) {
-            SDLUpdateMouseState();
-        }
-
         std::apply(update, GetArgs(pack));
 
         SDLPresent();

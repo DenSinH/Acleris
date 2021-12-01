@@ -3,6 +3,7 @@
 #include "util/Func.h"
 #include "util/Tuple.h"
 #include "util/Vector.h"
+#include "util/Algorithm.h"
 #include "Acleris.h"
 #include "Vertex.h"
 #include "Color.h"
@@ -23,11 +24,17 @@ private:
             static constexpr size_t dim = V0::dim;
 
             v4 _v0 = acleris.DeviceCoordinates(vert0);
+            if (_v0.get<3>() < 0) return;
 
+            float depth = _v0.get<2>();
             const vmath::Vector<std::uint32_t, 4> screen_coords = _v0.convert<std::uint32_t>();
+            const int x = screen_coords.get<0>();
+            const int y = screen_coords.get<1>();
 
             if (acleris.InBounds(screen_coords)) {
-                acleris.screen(screen_coords.get<0>(), screen_coords.get<1>()) = RGBA8(color);
+                if (acleris.CmpExchangeZ(depth, x, int(y))) {
+                    acleris.screen(screen_coords.get<0>(), screen_coords.get<1>()) = RGBA8(color);
+                }
             }
         }
     };

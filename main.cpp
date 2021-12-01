@@ -9,19 +9,21 @@
 #undef main
 int main() {
     Acleris rasterizer(800, 800);
-    rasterizer.Projection(1.0, 1.0, 1.0, 100.0);
+    rasterizer.Projection(1.0, 1.0, 1.0, 1000.0);
 
     constexpr float mouse_move = 0.01;
     constexpr float pi = 3.14159265;
     constexpr float dt = 2 * 3.1415 / 60;
+    constexpr float dx = 0.1;
 
     float t = 0.0;
     float theta = pi / 2;
-    float phi = pi / 2;
+    float phi = -pi/2;
 
     Acleris::Mouse prev = rasterizer.mouse;
 
-    rasterizer.SDLRun([&](Acleris::Mouse mouse) {
+    v3 pos = {0, 0, 1};
+    rasterizer.SDLRun([&](Acleris::Mouse mouse, Acleris::Keyboard keyboard) {
         rasterizer.Clear();
         t += dt;
 
@@ -37,8 +39,6 @@ int main() {
         prev = mouse;
 
         // update view matrix
-        v3 pos = {0, 0, 1};
-
         // spherical coordinates
         v3 look = {
                 std::sin(theta) * std::cos(phi),
@@ -50,12 +50,34 @@ int main() {
                 std::cos(theta - pi / 2),
                 std::sin(theta - pi / 2) * std::sin(phi)
         };
+
+        // move
+        if (keyboard.ascii['w']) {
+            pos += dx * (m3x3{{1, 0, 0}, {0, 0, 0}, {0, 0, 1}} * look);
+        }
+        if (keyboard.ascii['s']) {
+            pos -= dx * (m3x3{{1, 0, 0}, {0, 0, 0}, {0, 0, 1}} * look);
+        }
+        if (keyboard.ascii['a']) {
+            // "cross product with up"
+            pos -= dx * (m3x3{{0, 0, 1}, {0, 0, 0}, {-1, 0, 0}} * look);
+        }
+        if (keyboard.ascii['d']) {
+            // "cross product with up"
+            pos += dx * (m3x3{{0, 0, 1}, {0, 0, 0}, {-1, 0, 0}} * look);
+        }
+        if (keyboard.space) {
+            pos += dx * v3{0, 1, 0};
+        }
+        if (keyboard.lshift) {
+            pos -= dx * v3{0, 1, 0};
+        }
         rasterizer.LookAt(pos, pos + look, up);
 
         // draw geometry
-        auto v0 = MakeVertex<3>({-0.5, 0.5, 0}, RGB(1.0, 0.0, 0.0));
-        auto v1 = MakeVertex<3>({ 0.5, 0.5, 0}, RGB(0.0, 1.0, 0.0));
-        auto v2 = MakeVertex<3>({   0,-0.5, 0}, RGB(0.0, 0.0, 1.0), 0);
+        auto v0 = MakeVertex<3>({-0.5, 0.5, 0}, RGB(1.0, 0.0, 0.0), v3{-0.5, 0.5, 1});
+        auto v1 = MakeVertex<3>({ 0.5, 0.5, 0}, RGB(0.0, 1.0, 0.0), v3{ 0.5, 0.5, 1});
+        auto v2 = MakeVertex<3>({   0,-0.5, 0}, RGB(0.0, 0.0, 1.0), v3{   0,-0.5, 1});
 
         m3x3 mat{
                 {std::cos(t), std::sin(t), 0},
