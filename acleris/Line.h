@@ -58,8 +58,8 @@ private:
             // for y-major lines, the algorithm is precisely the same, except x and y are swapped
             static constexpr size_t dim = V0::dim;
 
-            if (_v0.get<2>() < 0) return;
-            if (_v1.get<2>() < 0) return;
+            if (_v0.get<3>() < 0) return;
+            if (_v1.get<3>() < 0) return;
 
             auto clip0 = acleris.Clip(_v0);
             auto clip1 = acleris.Clip(_v1);

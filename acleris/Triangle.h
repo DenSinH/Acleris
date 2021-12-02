@@ -68,11 +68,11 @@ private:
 
             // convert to device coordinates
             v4 _v0 = acleris.DeviceCoordinates(vert0);
-            if (_v0.get<2>() < 0) return;
+            if (_v0.get<3>() < 0) return;
             v4 _v1 = acleris.DeviceCoordinates(vert1);
-            if (_v1.get<2>() < 0) return;
+            if (_v1.get<3>() < 0) return;
             v4 _v2 = acleris.DeviceCoordinates(vert2);
-            if (_v2.get<2>() < 0) return;
+            if (_v2.get<3>() < 0) return;
 
             auto clip0 = acleris.Clip(_v0);
             auto clip1 = acleris.Clip(_v1);
