@@ -7,6 +7,7 @@
 #include "Acleris.h"
 #include "Vertex.h"
 #include "Color.h"
+#include "DrawList.h"
 
 #include <cmath>
 
@@ -21,13 +22,23 @@ struct Line {
 
 private:
     template<bool require_interp = true, typename F = Color (*)()>
-    struct FragmentImpl {
+    class FragmentImpl : public FragmentImplBase {
         static_assert(std::is_same_v<util::func_return_t<F>, Color>);
 
-        const V0& vert0;
-        const V1& vert1;
+        const V0 vert0;
+        const V1 vert1;
         const F func;
+    public:
+        FragmentImpl(V0 vert0, V1 vert1, F func) :
+                vert0(std::move(vert0)), vert1(std::move(vert1)), func(std::move(func)) {
+
+        }
+
+        ~FragmentImpl() = default;
     private:
+
+        friend struct DrawList;
+
         auto Interp(float x, float y, const float l0) {
             if constexpr(require_interp) {
                 const float l1 = 1 - l0;
@@ -54,7 +65,7 @@ private:
         }
 
         template<bool xmajor>
-        void Draw(Acleris& acleris, v4 _v0, v4 _v1) {
+        void DrawImpl(Acleris& acleris, v4 _v0, v4 _v1) {
             // for y-major lines, the algorithm is precisely the same, except x and y are swapped
             static constexpr size_t dim = V0::dim;
 
@@ -67,10 +78,6 @@ private:
                 // discard primitive
                 return;
             }
-
-//            std::printf("%f %f %f %f\n", _v0.get<0>(), _v0.get<1>(), _v0.get<2>(), _v0.get<3>());
-//            std::printf("%f %f %f %f\n", _v1.get<0>(), _v1.get<1>(), _v1.get<2>(), _v1.get<3>());
-//            std::printf("\n\n");
 
             float l0 = 0;
 
@@ -161,8 +168,7 @@ private:
             }
         }
 
-    public:
-        void Draw(Acleris& acleris) {
+        void DrawImpl(Acleris& acleris) final {
             // find out if the line is x-major or y-major
             // |y1 - y0| < |x1 - x0| <==> x-major (not steep)
             v4 _v0 = acleris.DeviceCoordinates(vert0);
@@ -171,10 +177,10 @@ private:
             const auto diff = (_v1 - _v0).abs();
             bool xmajor = diff.template get<0>() >= diff.template get<1>();
             if (xmajor) {
-                Draw<true>(acleris, _v0, _v1);
+                DrawImpl<true>(acleris, _v0, _v1);
             }
             else {
-                Draw<false>(acleris, _v0, _v1);
+                DrawImpl<false>(acleris, _v0, _v1);
             }
         }
     };
@@ -182,12 +188,12 @@ private:
 public:
     template<typename F>
     auto Fragment(F func) {
-        return FragmentImpl<true, F>{vert0, vert1, func};
+        return std::make_unique<FragmentImpl<true, F>>(vert0, vert1, func);
     }
 
     auto Color(Color color) {
         const auto func = [=]{ return color; };
-        return FragmentImpl<false, decltype(func)>{vert0, vert1, func};
+        return std::make_unique<FragmentImpl<false, decltype(func)>>(vert0, vert1, func);
     }
 };
 

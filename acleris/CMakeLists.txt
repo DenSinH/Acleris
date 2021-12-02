@@ -3,7 +3,6 @@ find_package(SDL2 REQUIRED)
 add_library(Acleris STATIC
         Acleris.h
         Acleris.cpp
-        util/Format.h
         util/StaticFor.h
         util/NArray.h
         Color.h
@@ -12,7 +11,7 @@ add_library(Acleris STATIC
         Shapes.h
         Triangle.h
         Vertex.h
-        util/Vector.h)
+        util/Vector.h DrawList.h)
 
 if (!${SDL2_FOUND})
     message(FATAL "Could not find SDL2")

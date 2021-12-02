@@ -1,5 +1,6 @@
 #include "acleris/Acleris.h"
 #include "acleris/Shapes.h"
+#include "acleris/DrawList.h"
 #include "VMath/Matrix.h"
 
 #include <cmath>
@@ -10,6 +11,8 @@
 int main() {
     Acleris rasterizer(800, 800);
     rasterizer.Projection(0.1, 0.1, 0.1, 100.0);
+
+    DrawList list(rasterizer);
 
     constexpr float mouse_move = 0.005;
     constexpr float pi = 3.14159265;
@@ -25,7 +28,7 @@ int main() {
     v3 pos = {0, 0, 1};
     rasterizer.SDLRun([&](Acleris::Mouse mouse, Acleris::Keyboard keyboard) {
         rasterizer.Clear();
-//        t += dt;
+        t += dt;
 
         // update mouse state
         if (mouse.x != prev.x) {
@@ -45,11 +48,6 @@ int main() {
                 std::cos(theta),
                 std::sin(theta) * std::sin(phi)
         };
-//        v3 up = {
-//                std::sin(theta - pi / 2) * std::cos(phi),
-//                std::cos(theta - pi / 2),
-//                std::sin(theta - pi / 2) * std::sin(phi)
-//        };
 
         // move
         if (keyboard.ascii['w']) {
@@ -86,30 +84,26 @@ int main() {
             {0, 0, 1},
         };
 
-//        printf("\n");
-//        printf("%f %f %f %f\n", rasterizer.view.get<0, 0>(), rasterizer.view.get<0, 1>(), rasterizer.view.get<0, 2>(), rasterizer.view.get<0, 3>());
-//        printf("%f %f %f %f\n", rasterizer.view.get<1, 0>(), rasterizer.view.get<1, 1>(), rasterizer.view.get<1, 2>(), rasterizer.view.get<1, 3>());
-//        printf("%f %f %f %f\n", rasterizer.view.get<2, 0>(), rasterizer.view.get<2, 1>(), rasterizer.view.get<2, 2>(), rasterizer.view.get<2, 3>());
-//        printf("%f %f %f %f\n", rasterizer.view.get<3, 0>(), rasterizer.view.get<3, 1>(), rasterizer.view.get<3, 2>(), rasterizer.view.get<3, 3>());
+        list << (mat * Triangle(vert0, vert1, vert2)).Fragment([](const Color& c) {
+            return c;
+        });
+        list << (mat * Triangle(vert0, vert1, vert3)).Fragment([](const Color& c) {
+            return c;
+        });
+        list << (mat * Triangle(vert0, vert2, vert3)).Fragment([](const Color& c) {
+            return c;
+        });
+        list << (mat * Triangle(vert1, vert2, vert3)).Fragment([](const Color& c) {
+            return c;
+        });
 
-        (mat * Triangle(vert0, vert1, vert2)).Fragment([](const Color& c) {
-            return c;
-        }).Draw(rasterizer);
-        (mat * Triangle(vert0, vert1, vert3)).Fragment([](const Color& c) {
-            return c;
-        }).Draw(rasterizer);
-        (mat * Triangle(vert0, vert2, vert3)).Fragment([](const Color& c) {
-            return c;
-        }).Draw(rasterizer);
-        (mat * Triangle(vert1, vert2, vert3)).Fragment([](const Color& c) {
-            return c;
-        }).Draw(rasterizer);
+        list << Line(MakeVertex<3>(v3{-1, 0, 0}), MakeVertex<3>(v3{1, 0, 0})).Color(RGB(1, 0, 0));
+        list << Line(MakeVertex<3>(v3{0, -1, 0}), MakeVertex<3>(v3{0, 1, 0})).Color(RGB(0, 1, 0));
+        list << Line(MakeVertex<3>(v3{0, 0, -1}), MakeVertex<3>(v3{0, 0, 1})).Color(RGB(0, 0, 1));
 
-        Line(MakeVertex<3>(v3{-1, 0, 0}), MakeVertex<3>(v3{1, 0, 0})).Color(RGB(1, 0, 0)).Draw(rasterizer);
-        Line(MakeVertex<3>(v3{0, -1, 0}), MakeVertex<3>(v3{0, 1, 0})).Color(RGB(0, 1, 0)).Draw(rasterizer);
-        Line(MakeVertex<3>(v3{0, 0, -1}), MakeVertex<3>(v3{0, 0, 1})).Color(RGB(0, 0, 1)).Draw(rasterizer);
-//
-//        Point(MakeVertex<3>(pos + look)).Color(0xffff'ffff).Draw(rasterizer);
+        list << Point(MakeVertex<3>(v3{2, 2, 0})).Color(0xffff'ffff);
+
+        list.Wait();
     });
 
     return 0;

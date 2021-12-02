@@ -7,6 +7,7 @@
 #include "Acleris.h"
 #include "Vertex.h"
 #include "Color.h"
+#include "DrawList.h"
 
 
 template<typename V0>
@@ -16,11 +17,21 @@ struct Point {
     Point(const V0& vert0) : vert0(vert0) { }
 
 private:
-    struct FragmentImpl {
-        const V0& vert0;
+    class FragmentImpl final : public FragmentImplBase {
+        const V0 vert0;
         const Color color;
+    public:
+        FragmentImpl(V0 vert0, Color color) :
+                vert0(std::move(vert0)), color(std::move(color)) {
 
-        void Draw(Acleris& acleris) {
+        }
+
+        ~FragmentImpl() = default;
+    private:
+
+        friend struct DrawList;
+
+        void DrawImpl(Acleris& acleris) final {
             static constexpr size_t dim = V0::dim;
 
             v4 _v0 = acleris.DeviceCoordinates(vert0);
@@ -41,11 +52,14 @@ private:
 
 public:
     auto Color(Color color) {
-        return FragmentImpl{vert0, color};
+        return std::make_unique<FragmentImpl>(vert0, color);
     }
 
     auto Color(std::uint32_t color) {
-        return FragmentImpl{vert0, vmath::Vector<std::uint32_t, 1>(color).reinterpret<uint8_t>().convert<float>() * (1 / 255.0f)};
+        return std::make_unique<FragmentImpl>(
+                vert0,
+                vmath::Vector<std::uint32_t, 1>(color).reinterpret<uint8_t>().convert<float>() * (1 / 255.0f)
+        );
     }
 };
 

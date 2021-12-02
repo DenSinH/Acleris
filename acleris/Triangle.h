@@ -7,6 +7,7 @@
 #include "Acleris.h"
 #include "Vertex.h"
 #include "Color.h"
+#include "DrawList.h"
 
 
 template<typename V0, typename V1, typename V2>
@@ -20,15 +21,24 @@ struct Triangle {
 
 private:
     template<bool require_interp = true, typename F = Color (*)()>
-    struct FragmentImpl {
+    class FragmentImpl final : public FragmentImplBase {
         static_assert(std::is_same_v<util::func_return_t<F>, Color>);
 
-        const V0& vert0;
-        const V1& vert1;
-        const V2& vert2;
+        const V0 vert0;
+        const V1 vert1;
+        const V2 vert2;
         const F func;
+    public:
+        FragmentImpl(V0 vert0, V1 vert1, V2 vert2, F func) :
+            vert0(std::move(vert0)), vert1(std::move(vert1)), vert2(std::move(vert2)), func(std::move(func)) {
 
+        }
+
+        ~FragmentImpl() = default;
     private:
+
+        friend struct DrawList;
+
         auto Interp(float x, float y, const std::pair<float, float>& l) {
             static constexpr size_t dim = V0::dim;
 
@@ -62,8 +72,8 @@ private:
                 return std::apply(func, args);
             }
         }
-    public:
-        void Draw(Acleris& acleris) {
+
+        void DrawImpl(Acleris& acleris) final {
             static constexpr size_t dim = V0::dim;
 
             // convert to device coordinates
@@ -174,7 +184,7 @@ private:
                     v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
                     float _depth = full_l.dot(depth);
 
-                    if (_depth > 0 && acleris.CmpExchangeZ(_depth, x, int(y))) {
+                    if (acleris.CmpExchangeZ(_depth, x, int(y))) {
                         std::uint32_t color;
                         const v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
 
@@ -233,7 +243,7 @@ private:
                     v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
                     float _depth = full_l.dot(depth);
 
-                    if (_depth > 0 && acleris.CmpExchangeZ(_depth, x, int(y))) {
+                    if (acleris.CmpExchangeZ(_depth, x, int(y))) {
                         std::uint32_t color;
                         v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
 
@@ -246,6 +256,9 @@ private:
                         }
                         else {
                             color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
+                        }
+                        if (acleris.zbuffer(x, int(y)) == _depth) {
+
                         }
                         acleris.screen(x, int(y)) = color;
                     }
@@ -266,12 +279,12 @@ private:
 public:
     template<typename F>
     auto Fragment(F func) {
-        return FragmentImpl<true, F>{vert0, vert1, vert2, func};
+        return std::make_unique<FragmentImpl<true, F>>(vert0, vert1, vert2, func);
     }
 
     auto Color(Color color) {
         const auto func = [&]{ return color; };
-        return FragmentImpl<false, decltype(func)>{vert0, vert1, vert2, func};
+        return std::make_unique<FragmentImpl<false, decltype(func)>>(vert0, vert1, vert2, func);
     }
 };
 

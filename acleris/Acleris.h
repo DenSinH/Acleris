@@ -120,7 +120,7 @@ struct Acleris {
     void Projection(float right, float top, float near, float far);
 
     template<size_t n, typename... Args>
-    v4 DeviceCoordinates(const Vertex<n, Args...>& vert) {
+    v4 DeviceCoordinates(const Vertex<n, Args...>& vert) const {
         // extend vertex position with w = 1 (if length is not yet 4)
         v4 result = vert.x.template extend<4>();
         if constexpr(n < 4) {
@@ -139,7 +139,7 @@ struct Acleris {
     }
 
     template<typename T, size_t n>
-    Clip::Direction Clip(const vmath::Vector<T, n>& v) {
+    Clip::Direction Clip(const vmath::Vector<T, n>& v) const {
         const T x = v.template get<0>();
         const T y = v.template get<1>();
         if (x < 0) return Clip::Left;
