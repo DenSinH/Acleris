@@ -1,7 +1,7 @@
 # Acleris
 A software rasterizer with nice syntax.
 
-The main goal of the project was to learn how rasterization work, and to try to do it in a fast way. Another goal was to use my vector math wrapper (see [here](https://github.com/DenSinH/VMath)).
+The main goal of the project was to learn how rasterization works, and to try to do it in a fast way. Another goal was to use my vector math wrapper (see [here](https://github.com/DenSinH/VMath)).
 
 The syntax turned out quite nice. Initialization of the program would be something like 
 
