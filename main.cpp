@@ -9,7 +9,7 @@
 #undef main
 int main() {
     Acleris rasterizer(800, 800);
-    rasterizer.Projection(1.0, 1.0, 1.0, 1000.0);
+    rasterizer.Projection(0.1, 0.1, 0.1, 100.0);
 
     constexpr float mouse_move = 0.005;
     constexpr float pi = 3.14159265;

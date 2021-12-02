@@ -60,6 +60,12 @@ struct Clear {
     };
 };
 
+struct Clip {
+    enum Direction {
+        None = 0, Right, Left, Top, Bottom
+    };
+};
+
 struct Acleris {
     const std::uint32_t width, height;
     util::NVect<std::uint32_t, 2> screen;
@@ -130,6 +136,17 @@ struct Acleris {
         result = (v4{1, 1, 0, 0} + util::Project(result)) * screen_dim * v4{0.5, 0.5, 1, 1};
 
         return result;
+    }
+
+    template<typename T, size_t n>
+    Clip::Direction Clip(const vmath::Vector<T, n>& v) {
+        const T x = v.template get<0>();
+        const T y = v.template get<1>();
+        if (x < 0) return Clip::Left;
+        if (x > width) return Clip::Right;
+        if (y < 0) return Clip::Top;
+        if (y > height) return Clip::Bottom;
+        return Clip::None;
     }
 
     struct Keyboard {

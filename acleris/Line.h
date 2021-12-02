@@ -58,6 +58,20 @@ private:
             // for y-major lines, the algorithm is precisely the same, except x and y are swapped
             static constexpr size_t dim = V0::dim;
 
+            if (_v0.get<2>() < 0) return;
+            if (_v1.get<2>() < 0) return;
+
+            auto clip0 = acleris.Clip(_v0);
+            auto clip1 = acleris.Clip(_v1);
+            if (clip0 && (clip0 == clip1)) {
+                // discard primitive
+                return;
+            }
+
+//            std::printf("%f %f %f %f\n", _v0.get<0>(), _v0.get<1>(), _v0.get<2>(), _v0.get<3>());
+//            std::printf("%f %f %f %f\n", _v1.get<0>(), _v1.get<1>(), _v1.get<2>(), _v1.get<3>());
+//            std::printf("\n\n");
+
             float l0 = 0;
 
             if constexpr(!xmajor) {
@@ -65,17 +79,6 @@ private:
                 _v0 = {_v0.get<1>(), _v0.get<0>(), _v0.get<2>(), _v0.get<3>()};
                 _v1 = {_v1.get<1>(), _v1.get<0>(), _v1.get<2>(), _v1.get<3>()};
             }
-
-//            if (_v0.get<3>() < 0) {
-//                _v0 = _v0.mask_mul(v4{-1}, vmath::Mask(0, 1, 2), _v0);
-//            }
-//            if (_v1.get<3>() < 0) {
-//                _v1 = _v1.mask_mul(v4{-1}, vmath::Mask(0, 1, 2), _v1);
-//            }
-//
-//            std::printf("%f %f %f %f\n", _v0.get<0>(), _v0.get<1>(), _v0.get<2>(), _v0.get<3>());
-//            std::printf("%f %f %f %f\n", _v1.get<0>(), _v1.get<1>(), _v1.get<2>(), _v1.get<3>());
-//            std::printf("\n");
 
             // from left to right
             if (_v1.get<0>() < _v0.get<0>()) {
@@ -128,16 +131,12 @@ private:
             // need to flip coordinates for x/y major
             if constexpr(xmajor) {
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(x_, int(y)); x_++) {
-                    const float depth_inverse = l0 * _v0.get<3>() + (1 - l0) * _v1.get<3>();
+                    const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
 
-                    if (depth_inverse >= 0) {
-                        const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
-
-                        if (acleris.CmpExchangeZ(depth, x_, int(y))) {
-                            acleris.screen(int(x_), int(y)) = RGBA8(
-                                    Interp(x_ / float(acleris.width), y / float(acleris.height), l0)
-                            );
-                        }
+                    if (acleris.CmpExchangeZ(depth, x_, int(y))) {
+                        acleris.screen(int(x_), int(y)) = RGBA8(
+                                Interp(x_ / float(acleris.width), y / float(acleris.height), l0)
+                        );
                     }
                     y += dy;
                     if constexpr(require_interp) {
@@ -147,16 +146,12 @@ private:
             }
             else {
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(int(y), x_); x_++) {
-                    const float depth_inverse = l0 * _v0.get<3>() + (1 - l0) * _v1.get<3>();
+                    const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
 
-                    if (depth_inverse >= 0) {
-                        const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
-
-                        if (acleris.CmpExchangeZ(depth, int(y), int(x_))) {
-                            acleris.screen(int(y), int(x_)) = RGBA8(
-                                    Interp(y / float(acleris.width), x_ / float(acleris.height), l0)
-                            );
-                        }
+                    if (acleris.CmpExchangeZ(depth, int(y), int(x_))) {
+                        acleris.screen(int(y), int(x_)) = RGBA8(
+                                Interp(y / float(acleris.width), x_ / float(acleris.height), l0)
+                        );
                     }
                     y += dy;
                     if constexpr(require_interp) {
