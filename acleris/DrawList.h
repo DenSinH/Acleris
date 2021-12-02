@@ -1,16 +1,10 @@
 #pragma once
 
 #include "Acleris.h"
+#include "Shapes.h"
 
 #include <future>
 #include <queue>
-
-
-struct FragmentImplBase {
-    virtual ~FragmentImplBase() = default;
-
-    virtual void DrawImpl(Acleris& acleris) = 0;
-};
 
 
 struct DrawList {

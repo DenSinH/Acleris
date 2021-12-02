@@ -2,43 +2,50 @@
 
 #include <type_traits>
 #include <functional>
+#include <tuple>
 
 
 namespace util {
 
-template<class F>
-struct func {
-    using args_t = typename func<decltype(&F::operator())>::args_t;
-    using return_t = typename func<decltype(&F::operator())>::return_t;
-};
+/*
+ * For getting function argument types.
+ * */
 
-template<class R, class...Args>
+template<typename Callable> struct func;
+
+template<typename R, typename... Args>
 struct func<R(Args...)> {
     using args_t = std::tuple<Args...>;
     using return_t = R;
 };
 
-template<class R, class...Args>
-struct func<std::function<R(Args...)>> {
+template<typename R, typename... Args>
+struct func<R (*)(Args...)> {
     using args_t = std::tuple<Args...>;
     using return_t = R;
 };
 
-template<typename C, typename R, typename... Args>
+template<typename R, typename C, typename... Args>
 struct func<R (C::*)(Args...)> {
     using args_t = std::tuple<Args...>;
     using return_t = R;
 };
 
-template<typename F, typename R, typename... Args>
-struct func<R (F::*)(Args...) const> {
+template<typename R, typename C, typename... Args>
+struct func<R (C::*)(Args...) const> {
     using args_t = std::tuple<Args...>;
     using return_t = R;
 };
 
-template<class Sig>
-using func_args_t = typename func<Sig>::args_t;
-template<class Sig>
-using func_return_t = typename func<Sig>::return_t;
+template<typename Callable>
+struct func {
+    using args_t = typename func<decltype(&Callable::operator())>::args_t;
+    using return_t = typename func<decltype(&Callable::operator())>::return_t;
+};
+
+template<class F>
+using func_args_t = typename func<F>::args_t;
+template<class F>
+using func_return_t = typename func<F>::return_t;
 
 }

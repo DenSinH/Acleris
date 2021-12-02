@@ -35,8 +35,6 @@ void Acleris::LookAt(const v3& eye, const v3& center, const v3& up) {
             {f.get<0>(), f.get<1>(), f.get<2>(), -f.dot(eye)},
             {0, 0, 0, 1},
     };
-
-//    view = {s.extend<4>(), u.extend<4>(), f.extend<4>(), last_col};
 }
 
 void Acleris::Projection(float l, float r, float b, float t, float n, float f) {

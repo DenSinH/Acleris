@@ -1,6 +1,12 @@
 #pragma once
 
 
+struct FragmentImplBase {
+    virtual ~FragmentImplBase() = default;
+
+    virtual void DrawImpl(Acleris& acleris) = 0;
+};
+
 #include "Vertex.h"
 #include "Point.h"
 #include "Line.h"

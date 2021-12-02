@@ -73,6 +73,12 @@ int main() {
         rasterizer.LookAt(-pos, -pos + look, v3{0, 1, 0});
 
         // draw geometry
+        // we can pass more vertex parameters by adding them to the constructor, for example
+        // auto example = MakeVertex<3>({-0.5, 0.5, 0}, RGB(1.0, 0.0, 0.0), v2{1, 0}, 1.0f);
+        // to pass some other parameters
+        // the fragment shader can then use those (interpolated) arguments by adding them as arguments (in the right order), like
+        // .Fragment([&](Color c, v2 tex, float value) {....});
+        // which we will see later
         auto vert0 = MakeVertex<3>({-0.5, 0.5, 0}, RGB(1.0, 0.0, 0.0));
         auto vert1 = MakeVertex<3>({ 0.5, 0.5, 0}, RGB(0.0, 1.0, 0.0));
         auto vert2 = MakeVertex<3>({   0,-0.5, 0}, RGB(0.0, 0.0, 1.0));
@@ -86,6 +92,7 @@ int main() {
 
         for (int i = 0; i < 50; i++) {
             list << (mat * Triangle(vert0, vert1, vert2) + v3{i, 0, 0}).Fragment([](const Color& c) {
+                // you can add more interesting code here...
                 return c;
             });
             list << (mat * Triangle(vert0, vert1, vert3) + v3{i, 0, 0}).Fragment([](const Color& c) {
@@ -99,6 +106,7 @@ int main() {
             });
         }
 
+        // drawing a solid color with .Color(...) instead
         list << Line(MakeVertex<3>(v3{-1, 0, 0}), MakeVertex<3>(v3{1, 0, 0})).Color(RGB(1, 0, 0));
         list << Line(MakeVertex<3>(v3{0, -1, 0}), MakeVertex<3>(v3{0, 1, 0})).Color(RGB(0, 1, 0));
         list << Line(MakeVertex<3>(v3{0, 0, -1}), MakeVertex<3>(v3{0, 0, 1})).Color(RGB(0, 0, 1));

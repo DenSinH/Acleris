@@ -2,6 +2,7 @@
 
 #include "util/NArray.h"
 #include "util/Vector.h"
+#include "util/Func.h"
 #include "Vertex.h"
 #include "VMath/Matrix.h"
 
@@ -12,46 +13,6 @@
 #include <functional>
 #include <mutex>
 
-
-namespace detail {
-
-/*
- * For getting function argument types.
- * */
-
-template<typename... Args>
-struct pack {
-
-};
-
-template<typename Callable> struct func;
-
-template<typename R, typename... Args>
-struct func<R(Args...)> {
-    using args_t = pack<Args...>;
-};
-
-template<typename R, typename... Args>
-struct func<R (*)(Args...)> {
-    using args_t = pack<Args...>;
-};
-
-template<typename R, typename C, typename... Args>
-struct func<R (C::*)(Args...)> {
-    using args_t = pack<Args...>;
-};
-
-template<typename R, typename C, typename... Args>
-struct func<R (C::*)(Args...) const> {
-    using args_t = pack<Args...>;
-};
-
-template<typename Callable>
-struct func {
-    using args_t = typename func<decltype(&Callable::operator())>::args_t;
-};
-
-}
 
 struct Clear {
     enum : std::uint32_t {
@@ -194,12 +155,12 @@ private:
     }
 
     template<typename... Args>
-    std::tuple<Args...> GetArgs(detail::pack<Args...>) {
+    std::tuple<Args...> GetArgs(std::tuple<Args...>) {
         return std::tuple<Args...>{GetArg<Args>()...};
     }
 
     template<typename T, typename... Args>
-    static constexpr bool Need(detail::pack<Args...>) {
+    static constexpr bool Need(std::tuple<Args...>) {
         return (std::is_same_v<T, Args> || ...);
     }
 
@@ -219,7 +180,7 @@ void Acleris::SDLRun(const F& update) {
     while (!frontend.shutdown) {
         SDLPollEvents();
 
-        auto pack = typename detail::func<F>::args_t{};
+        auto pack = typename util::func<F>::args_t{};
         std::apply(update, GetArgs(pack));
 
         SDLPresent();
