@@ -84,18 +84,20 @@ int main() {
             {0, 0, 1},
         };
 
-        list << (mat * Triangle(vert0, vert1, vert2)).Fragment([](const Color& c) {
-            return c;
-        });
-        list << (mat * Triangle(vert0, vert1, vert3)).Fragment([](const Color& c) {
-            return c;
-        });
-        list << (mat * Triangle(vert0, vert2, vert3)).Fragment([](const Color& c) {
-            return c;
-        });
-        list << (mat * Triangle(vert1, vert2, vert3)).Fragment([](const Color& c) {
-            return c;
-        });
+        for (int i = 0; i < 50; i++) {
+            list << (mat * Triangle(vert0, vert1, vert2) + v3{i, 0, 0}).Fragment([](const Color& c) {
+                return c;
+            });
+            list << (mat * Triangle(vert0, vert1, vert3) + v3{i, 0, 0}).Fragment([](const Color& c) {
+                return c;
+            });
+            list << (mat * Triangle(vert0, vert2, vert3) + v3{i, 0, 0}).Fragment([](const Color& c) {
+                return c;
+            });
+            list << (mat * Triangle(vert1, vert2, vert3) + v3{i, 0, 0}).Fragment([](const Color& c) {
+                return c;
+            });
+        }
 
         list << Line(MakeVertex<3>(v3{-1, 0, 0}), MakeVertex<3>(v3{1, 0, 0})).Color(RGB(1, 0, 0));
         list << Line(MakeVertex<3>(v3{0, -1, 0}), MakeVertex<3>(v3{0, 1, 0})).Color(RGB(0, 1, 0));

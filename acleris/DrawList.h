@@ -21,14 +21,21 @@ struct DrawList {
     Acleris& acleris;
 
 private:
+    static constexpr bool SingleThread = false;
+
     std::queue<std::pair<std::future<void>, std::unique_ptr<FragmentImplBase>>> futures{};
 
 public:
     void operator<<(std::unique_ptr<FragmentImplBase>&& frag) {
-        futures.emplace(
-            std::async(std::launch::async, &FragmentImplBase::DrawImpl, frag.get(), std::ref(acleris)),
-            std::move(frag)
-        );
+        if constexpr(SingleThread) {
+            frag->DrawImpl(acleris);
+        }
+        else {
+            futures.emplace(
+                std::async(std::launch::async, &FragmentImplBase::DrawImpl, frag.get(), std::ref(acleris)),
+                std::move(frag)
+            );
+        }
     }
 
     void Wait() {

@@ -140,11 +140,13 @@ private:
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(x_, int(y)); x_++) {
                     const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
 
-                    if (acleris.CmpExchangeZ(depth, x_, int(y))) {
-                        acleris.screen(int(x_), int(y)) = RGBA8(
-                                Interp(x_ / float(acleris.width), y / float(acleris.height), l0)
-                        );
-                    }
+                    acleris.AccessRegion(x_, int(y), [&]{
+                        if (acleris.CmpExchangeZ(depth, x_, y)) {
+                            acleris.screen(int(x_), int(y)) = RGBA8(
+                                    Interp(x_ / float(acleris.width), y / float(acleris.height), l0)
+                            );
+                        }
+                    });
                     y += dy;
                     if constexpr(require_interp) {
                         l0 += dl;
@@ -155,11 +157,13 @@ private:
                 for (int x_ = int(x); x_ < _v1.get<0>() && acleris.InBounds(int(y), x_); x_++) {
                     const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
 
-                    if (acleris.CmpExchangeZ(depth, int(y), int(x_))) {
-                        acleris.screen(int(y), int(x_)) = RGBA8(
-                                Interp(y / float(acleris.width), x_ / float(acleris.height), l0)
-                        );
-                    }
+                    acleris.AccessRegion(int(y), int(x_), [&]{
+                        if (acleris.CmpExchangeZ(depth, y, x_)) {
+                            acleris.screen(int(y), int(x_)) = RGBA8(
+                                    Interp(y / float(acleris.width), x_ / float(acleris.height), l0)
+                            );
+                        }
+                    });
                     y += dy;
                     if constexpr(require_interp) {
                         l0 += dl;

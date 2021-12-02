@@ -10,7 +10,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include <atomic>
+#include <mutex>
 
 
 namespace detail {
@@ -67,12 +67,19 @@ struct Clip {
 };
 
 struct Acleris {
+    const std::uint32_t RegionSize = 8;
+
     const std::uint32_t width, height;
     util::NVect<std::uint32_t, 2> screen;
-    util::NVect<std::atomic<float>, 2> zbuffer;
+    util::NVect<float, 2> zbuffer;
     m4x4 view;
     float near, far;
     m4x4 projection;
+
+private:
+    util::NVect<std::mutex, 2> regions;
+
+public:
 
     Acleris(int width, int height);
 
@@ -101,17 +108,18 @@ struct Acleris {
         return (x >= 0) && (x < width) && (y >= 0) && (y < height);
     }
 
-    template<class Comp = std::less<float>>
+    template<class F>
+    void AccessRegion(int x, int y, const F& func) {
+        std::lock_guard<std::mutex> lock(regions(x / RegionSize, y / RegionSize));
+        func();
+    }
+
     bool CmpExchangeZ(float z, int x, int y) {
-        Comp comp;
-        float current_z;
-        auto& dest = zbuffer(x, y);
-        do {
-            current_z = dest.load();
-            if (!comp(z, current_z)) {
-                return false;
-            }
-        } while(!dest.compare_exchange_weak(current_z, z));
+        float& current_z = zbuffer(x, y);
+        if (z >= current_z) {
+            return false;
+        }
+        current_z = z;
         return true;
     }
 

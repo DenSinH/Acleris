@@ -184,23 +184,25 @@ private:
                     v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
                     float _depth = full_l.dot(depth);
 
-                    if (acleris.CmpExchangeZ(_depth, x, int(y))) {
-                        std::uint32_t color;
-                        const v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
+                    acleris.AccessRegion(x, int(y), [&]{
+                        if (acleris.CmpExchangeZ(_depth, x, y)) {
+                            std::uint32_t color;
+                            const v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
 
-                        const std::array<float, 4> l_ = perspective.data();
-                        if constexpr(require_interp) {
-                            color = RGBA8(Interp(
-                                    x / float(acleris.width), y / float(acleris.height),
-                                    std::make_pair(l_[idx[0]], l_[idx[1]])
-                            ));
-                        }
-                        else {
-                            color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
-                        }
+                            const std::array<float, 4> l_ = perspective.data();
+                            if constexpr(require_interp) {
+                                color = RGBA8(Interp(
+                                        x / float(acleris.width), y / float(acleris.height),
+                                        std::make_pair(l_[idx[0]], l_[idx[1]])
+                                ));
+                            }
+                            else {
+                                color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
+                            }
 
-                        acleris.screen(x, int(y)) = color;
-                    }
+                            acleris.screen(x, int(y)) = color;
+                        }
+                    });
                     l  += dl;
                 }
                 x1 += dx1;
@@ -243,25 +245,27 @@ private:
                     v3 full_l = l.extend<3>() + v3{0, 0, 1 - l.sum()};
                     float _depth = full_l.dot(depth);
 
-                    if (acleris.CmpExchangeZ(_depth, x, int(y))) {
-                        std::uint32_t color;
-                        v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
+                    acleris.AccessRegion(x, y, [&]{
+                        if (acleris.CmpExchangeZ(_depth, x, int(y))) {
+                            std::uint32_t color;
+                            v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
 
-                        const std::array<float, 4> l_ = perspective.data();
-                        if constexpr(require_interp) {
-                            color = RGBA8(Interp(
-                                    x / float(acleris.width), y / float(acleris.height),
-                                    std::make_pair(l_[idx[0]], l_[idx[1]])
-                            ));
-                        }
-                        else {
-                            color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
-                        }
-                        if (acleris.zbuffer(x, int(y)) == _depth) {
+                            const std::array<float, 4> l_ = perspective.data();
+                            if constexpr(require_interp) {
+                                color = RGBA8(Interp(
+                                        x / float(acleris.width), y / float(acleris.height),
+                                        std::make_pair(l_[idx[0]], l_[idx[1]])
+                                ));
+                            }
+                            else {
+                                color = RGBA8(Interp(x / float(acleris.width), y / float(acleris.height), {}));
+                            }
+                            if (acleris.zbuffer(x, int(y)) == _depth) {
 
+                            }
+                            acleris.screen(x, int(y)) = color;
                         }
-                        acleris.screen(x, int(y)) = color;
-                    }
+                    });
 
                     l  += dl;
                 }

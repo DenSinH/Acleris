@@ -5,6 +5,7 @@
 
 Acleris::Acleris(int width, int height) :
         width(width), height(height), screen{width, height}, zbuffer{width, height},
+        regions(width / RegionSize, height / RegionSize),
         view{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}} {
     Clear();
 }

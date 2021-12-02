@@ -43,9 +43,11 @@ private:
             const int y = screen_coords.get<1>();
 
             if (acleris.InBounds(screen_coords)) {
-                if (acleris.CmpExchangeZ(depth, x, int(y))) {
-                    acleris.screen(screen_coords.get<0>(), screen_coords.get<1>()) = RGBA8(color);
-                }
+                acleris.AccessRegion(x, y, [&]{
+                    if (acleris.CmpExchangeZ(depth, x, int(y))) {
+                        acleris.screen(screen_coords.get<0>(), screen_coords.get<1>()) = RGBA8(color);
+                    }
+                });
             }
         }
     };
