@@ -81,3 +81,7 @@ to the vertex constructors (`vert0`, etc.). The compiler will inspect the parame
 (so passing too many is no problem, passing too few will break the program).
 
 They are placed in a drawlist where the triangles are drawn asynchronously, and you can wait until they are drawn before you return from the screen update function.
+
+A video of the example code being run can be seen below:
+
+https://user-images.githubusercontent.com/25347040/144504131-3bb75b8c-48d2-4130-8e87-fa28719d248e.mp4
