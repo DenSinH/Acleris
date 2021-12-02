@@ -114,7 +114,7 @@ public:
         func();
     }
 
-    bool CmpExchangeZ(float z, int x, int y) {
+    bool DepthTest(float z, int x, int y) {
         float& current_z = zbuffer(x, y);
         if (z >= current_z) {
             return false;

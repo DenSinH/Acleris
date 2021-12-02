@@ -185,7 +185,7 @@ private:
                     float _depth = full_l.dot(depth);
 
                     acleris.AccessRegion(x, int(y), [&]{
-                        if (acleris.CmpExchangeZ(_depth, x, y)) {
+                        if (acleris.DepthTest(_depth, x, y)) {
                             std::uint32_t color;
                             const v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
 
@@ -246,7 +246,7 @@ private:
                     float _depth = full_l.dot(depth);
 
                     acleris.AccessRegion(x, y, [&]{
-                        if (acleris.CmpExchangeZ(_depth, x, int(y))) {
+                        if (acleris.DepthTest(_depth, x, int(y))) {
                             std::uint32_t color;
                             v3 perspective = (full_l * depth_inverse) * (1 / full_l.dot(depth_inverse));
 

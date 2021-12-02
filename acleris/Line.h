@@ -141,7 +141,7 @@ private:
                     const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
 
                     acleris.AccessRegion(x_, int(y), [&]{
-                        if (acleris.CmpExchangeZ(depth, x_, y)) {
+                        if (acleris.DepthTest(depth, x_, y)) {
                             acleris.screen(int(x_), int(y)) = RGBA8(
                                     Interp(x_ / float(acleris.width), y / float(acleris.height), l0)
                             );
@@ -158,7 +158,7 @@ private:
                     const float depth = l0 * _v0.get<2>() + (1 - l0) * _v1.get<2>();
 
                     acleris.AccessRegion(int(y), int(x_), [&]{
-                        if (acleris.CmpExchangeZ(depth, y, x_)) {
+                        if (acleris.DepthTest(depth, y, x_)) {
                             acleris.screen(int(y), int(x_)) = RGBA8(
                                     Interp(y / float(acleris.width), x_ / float(acleris.height), l0)
                             );
